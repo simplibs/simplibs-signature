@@ -12,7 +12,7 @@
 sig = create_signature(extra_param, base_func=my_func)
 
 # Or use the decorator shorthand
-@signature_from(extra_param, base_func_first=False)
+@signature(extra_param, base_func_first=False)
 def my_func(*args, **kwargs):
     ...
 
@@ -41,7 +41,7 @@ def create(*args, **kwargs):
 pip install simplibs-signature
 ```
 ```python
-from simplibs.signature import create_signature, signature_from, signature_copy
+from simplibs.signature import create_signature, signature, signature_copy
 ```
 
 > Note: This library automatically installs `simplibs-exception` and
@@ -59,7 +59,7 @@ builder instance.
 
 On top of that, the library provides a set of utilities for working with
 signatures directly — retrieving, copying, applying — and two decorators,
-`signature_copy` and `signature_from`, that cover the most common use cases
+`signature_copy` and `signature`, that cover the most common use cases
 in a compact one-liner form.
 
 ### Assemble a signature programmatically
@@ -89,11 +89,11 @@ def create(*args, **kwargs):
 
 ### Merge parameters from multiple sources
 ```python
-from simplibs.signature import signature_from, create_keyword_parameter
+from simplibs.signature import signature, create_keyword_parameter
 
 extra = create_keyword_parameter("timeout", annotation=int, default=30)
 
-@signature_from(extra)
+@signature(extra)
 def connect(host: str, port: int):
     ...
 
@@ -123,14 +123,14 @@ def my_func(*args, **kwargs):
 | `base_func`   | `Callable`                      | The function or method whose signature is copied                                   |
 | `return_type` | `type \| None \| UNSET`         | Override the return annotation. `UNSET` preserves the original, `None` removes it |
 
-### signature_from
+### signature
 
 Assembles a new signature from the decorated function and any additional
 parameter sources. The decorated function becomes `base_func`.
 ```python
-from simplibs.signature import signature_from
+from simplibs.signature import signature
 
-@signature_from(param_or_func, ..., base_func_first=True)
+@signature(param_or_func, ..., base_func_first=True)
 def my_func(*args, **kwargs):
     ...
 ```
@@ -248,7 +248,7 @@ Both factories accept:
 
 ## SignatureCreator
 
-The engine behind `signature_from` and `create_signature` — assembles an
+The engine behind `signature` and `create_signature` — assembles an
 `inspect.Signature` from any combination of callables and `inspect.Parameter`
 instances. Use it directly when you need the builder instance itself, or reach
 for `create_signature` for the one-liner functional form:
@@ -313,6 +313,8 @@ This library builds on two other simplibs packages:
   All errors raised by `simplibs-signature` are structured `SimpleException`
   subclasses, catchable as `SignatureError` or the more specific
   `SignatureParameterError` and `SignatureBuildError`:
+
+
 ```python
 from simplibs.signature import SignatureError, SignatureBuildError, SignatureParameterError
 
@@ -335,6 +337,7 @@ except SignatureError:
 - **`simplibs-sentinels`** — sentinel values shared across the ecosystem.
   `UNSET` is used throughout `simplibs-signature` to distinguish between
   a parameter that was not provided and one explicitly set to `None`:
+
 ```python
 from simplibs.sentinels import UNSET
 from simplibs.signature import create_copy_signature
