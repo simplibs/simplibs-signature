@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "simplibs-signature"
-version = "0.2.0"
+version = "0.2.1"
 description = "Lightweight utilities for dynamic and declarative function signature manipulation, inspection, and validation."
 readme = "README.md"
 license = "MIT"
@@ -31,7 +31,7 @@ classifiers = [
     "Topic :: Software Development :: Quality Assurance",
 ]
 dependencies = [
-    "simplibs-exception>=0.1.0",
+    "simplibs-exception>=0.2.0",
     "simplibs-sentinels>=0.1.0",
 ]
 
