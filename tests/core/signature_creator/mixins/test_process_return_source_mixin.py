@@ -7,7 +7,7 @@ from typing import List, Union, Optional
 from simplibs.sentinels import UNSET
 
 # Imports based on the provided project structure
-from src.simplibs.signature.core.signature_creator._mixins.ProcessReturnSource import ProcessReturnSourceMixin
+from simplibs.signature.core.signature_creator._mixins.ProcessReturnSource import ProcessReturnSourceMixin
 
 
 # -----------------------------------------------------------------------------

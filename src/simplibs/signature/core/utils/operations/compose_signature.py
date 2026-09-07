@@ -50,7 +50,7 @@ def compose_signature(
     except ValueError as e:
         raise SignatureBuildError(
             error_name  = "SIGNATURE COMPOSITION ERROR",
-            value_label = "parameters",
+            label       = "parameters",
             value       = parameters,
             expected    = "a collection of valid, uniquely named inspect.Parameter instances",
             problem     = "One or more parameters are structurally invalid (e.g. duplicates or wrong order).",
@@ -66,7 +66,7 @@ def compose_signature(
     except AttributeError as e:
         raise SignatureBuildError(
             error_name="SIGNATURE COMPOSITION ERROR",
-            value_label="parameters",
+            label="parameters",
             value=parameters,
             expected="a collection of inspect.Parameter instances",
             problem="One or more items in the parameters collection are not valid Parameter objects.",
@@ -81,7 +81,7 @@ def compose_signature(
     except TypeError as e:
         raise SignatureBuildError(
             error_name  = "SIGNATURE COMPOSITION ERROR",
-            value_label = "parameters",
+            label       = "parameters",
             value       = parameters,
             expected    = "an iterable of inspect.Parameter instances",
             problem     = "The parameters collection or return_annotation is of an unsupported type.",

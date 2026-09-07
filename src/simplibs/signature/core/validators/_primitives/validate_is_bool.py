@@ -20,7 +20,7 @@ def validate_is_bool(
     if not isinstance(value, bool):
         raise SignatureParameterError(
             error_name  = "INVALID ARGUMENT ERROR",
-            value_label = value_name,
+            label       = value_name,
             value       = value,
             expected    = "a boolean value: True or False",
             problem     = f"'{value_name}' must be a bool, but got {type(value).__name__!r}.",

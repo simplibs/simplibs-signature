@@ -72,7 +72,7 @@ def test_empty_error_fields_are_correct():
 
     e = exc_info.value
     assert e.value == ()
-    assert e.value_label == "my_sources"
+    assert e.label == "my_sources"
     assert e.error_name == "SIGNATURE CREATOR ERROR"
 
 
@@ -86,7 +86,7 @@ def test_invalid_item_error_fields_include_index_and_type():
 
     e = exc_info.value
     assert e.value == "invalid_string"
-    assert e.value_label == "sources[1]"
+    assert e.label == "sources[1]"
     assert "str" in str(e.problem)
     assert e.error_name == "INVALID PARAMETER SOURCE"
 
@@ -100,4 +100,4 @@ def test_default_value_name_is_param_sources():
     with pytest.raises(SignatureBuildError) as exc_info:
         validate_param_sources(())
 
-    assert exc_info.value.value_label == "param_sources"
+    assert exc_info.value.label == "param_sources"

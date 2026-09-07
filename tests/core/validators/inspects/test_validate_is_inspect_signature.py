@@ -67,7 +67,7 @@ def test_error_fields_are_correct():
 
     e = exc_info.value
     assert e.value == "not_a_signature"
-    assert e.value_label == "target_sig"
+    assert e.label == "target_sig"
     assert e.error_name == "INVALID ARGUMENT ERROR"
     assert isinstance(e, TypeError)
 
@@ -81,4 +81,4 @@ def test_default_value_name_is_signature():
     with pytest.raises(SignatureParameterError) as exc_info:
         validate_is_inspect_signature(None)
 
-    assert exc_info.value.value_label == "signature"
+    assert exc_info.value.label == "signature"

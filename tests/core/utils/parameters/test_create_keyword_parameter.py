@@ -6,8 +6,8 @@ import inspect
 from typing import Any
 
 # Imports based on the provided project structure
-from src.simplibs.signature.core.utils.parameters.create_keyword_parameter import create_keyword_parameter
-from src.simplibs.signature.core.validators.exceptions.SignatureParameterError import SignatureParameterError
+from simplibs.signature.core.utils.parameters.create_keyword_parameter import create_keyword_parameter
+from simplibs.signature.core.validators.exceptions.SignatureParameterError import SignatureParameterError
 
 
 # -----------------------------------------------------------------------------
@@ -49,7 +49,7 @@ def test_invalid_name_type_raises():
         create_keyword_parameter(None)  # type: ignore
 
     assert isinstance(exc_info.value, TypeError)
-    assert "name" in str(exc_info.value.value_label)
+    assert "name" in str(exc_info.value.label)
 
 
 def test_mismatched_default_and_annotation_raises():
@@ -58,7 +58,7 @@ def test_mismatched_default_and_annotation_raises():
         create_keyword_parameter("count", default="not_an_int", annotation=int)
 
     assert isinstance(exc_info.value, TypeError)
-    assert "default" in str(exc_info.value.value_label)
+    assert "default" in str(exc_info.value.label)
 
 
 def test_skip_validation():

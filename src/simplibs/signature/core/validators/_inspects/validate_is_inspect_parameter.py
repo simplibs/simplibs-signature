@@ -21,7 +21,7 @@ def validate_is_inspect_parameter(
     if not isinstance(value, inspect.Parameter):
         raise SignatureBuildError(
             error_name  = "INVALID PARAMETER TYPE",
-            value_label = value_name,
+            label       = value_name,
             value       = value,
             expected    = "an instance of inspect.Parameter",
             problem     = f"Expected a proper inspect.Parameter object, but got {type(value).__name__!r}.",

@@ -36,7 +36,7 @@ def get_signature(
     except ValueError as e:
         raise SignatureBuildError(
             error_name  = "SIGNATURE INTROSPECTION ERROR",
-            value_label = "function",
+            label       = "function",
             value       = function,
             expected    = "a function with an introspectable signature",
             problem     = "The function's signature cannot be introspected (e.g. built-in without signature metadata).",
@@ -52,7 +52,7 @@ def get_signature(
     except TypeError as e:
         raise SignatureBuildError(
             error_name  = "SIGNATURE INTROSPECTION ERROR",
-            value_label = "function",
+            label       = "function",
             value       = function,
             expected    = "a callable supported by inspect.signature()",
             problem     = "The object type is not supported by inspect.signature().",

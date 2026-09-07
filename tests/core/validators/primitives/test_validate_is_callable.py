@@ -60,7 +60,7 @@ def test_error_fields_are_correct():
 
     e = exc_info.value
     assert e.value == 42
-    assert e.value_label == "test_func"
+    assert e.label == "test_func"
     assert e.error_name == "INVALID ARGUMENT ERROR"
     assert isinstance(e, TypeError)
 
@@ -75,4 +75,4 @@ def test_default_value_name_is_function():
         validate_is_callable(123)
 
     e = exc_info.value
-    assert e.value_label == "function"
+    assert e.label == "function"

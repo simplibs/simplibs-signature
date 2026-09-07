@@ -4,7 +4,7 @@ from simplibs.exception import SimpleException
 class SignatureError(SimpleException):
     """Base exception for the simple-signature library."""
     error_name = "SIGNATURE ERROR"
-    _skip_locations = ("simplibs/signature",)
+    skip_locations = ("simplibs/signature",)
 
 
 _DESIGN_NOTES = """

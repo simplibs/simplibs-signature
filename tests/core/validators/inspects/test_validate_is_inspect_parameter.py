@@ -52,7 +52,7 @@ def test_error_fields_are_correct():
     e = exc_info.value
 
     assert e.value == bad_value
-    assert e.value_label == "param"
+    assert e.label == "param"
     assert e.error_name == "INVALID PARAMETER TYPE"
     assert "inspect.parameter" in str(e.expected).lower()
     assert isinstance(e, TypeError)
@@ -68,4 +68,4 @@ def test_custom_value_name_is_used():
         validate_is_inspect_parameter(123, value_name="my_param")
 
     e = exc_info.value
-    assert e.value_label == "my_param"
+    assert e.label == "my_param"

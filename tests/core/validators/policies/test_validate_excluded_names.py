@@ -83,19 +83,19 @@ def test_container_error_fields_are_correct_for_non_iterables():
 
     e = exc_info.value
     assert e.value == invalid_input
-    assert e.value_label == "my_excludes"
+    assert e.label == "my_excludes"
     assert e.error_name == "INVALID ARGUMENT ERROR"
 
 
 def test_item_error_fields_include_index():
-    """The raised exception for bad item must include the index in value_label."""
+    """The raised exception for bad item must include the index in label."""
     # Test fail-fast on index 1 (using a list)
     with pytest.raises(SignatureParameterError) as exc_info:
         validate_excluded_names(["valid", 123, "next_invalid"], "excluded")
 
     e = exc_info.value
     assert e.value == 123
-    assert e.value_label == "excluded[1]"
+    assert e.label == "excluded[1]"
     assert "Item at index 1" in e.problem
 
 
@@ -104,4 +104,4 @@ def test_default_value_name_is_excluded_names():
     with pytest.raises(SignatureParameterError) as exc_info:
         validate_excluded_names(None)
 
-    assert exc_info.value.value_label == "excluded_names"
+    assert exc_info.value.label == "excluded_names"

@@ -76,7 +76,7 @@ class AddParamMixin:
         except KeyError:
             raise SignatureBuildError(
                 error_name="INVALID PARAMETER KIND ERROR",
-                value_label="param.kind",
+                label="param.kind",
                 value=param.kind,
                 expected="a valid inspect._ParameterKind enum value",
                 problem=f"Parameter '{param.name}' has an unsupported kind: {param.kind!r}.",

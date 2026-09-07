@@ -6,9 +6,9 @@ import inspect
 from typing import Any
 
 # Imports based on the provided project structure
-from src.simplibs.signature.core.utils.modifiers.add_params_to_signature import add_params_to_signature
-from src.simplibs.signature.core.validators.exceptions.SignatureBuildError import SignatureBuildError
-from src.simplibs.signature.core.validators.exceptions.SignatureParameterError import SignatureParameterError
+from simplibs.signature.core.utils.modifiers.add_params_to_signature import add_params_to_signature
+from simplibs.signature.core.validators.exceptions.SignatureBuildError import SignatureBuildError
+from simplibs.signature.core.validators.exceptions.SignatureParameterError import SignatureParameterError
 
 
 # -----------------------------------------------------------------------------

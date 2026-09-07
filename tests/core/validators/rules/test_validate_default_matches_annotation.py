@@ -86,7 +86,7 @@ def test_error_fields_are_correct():
 
     e = exc_info.value
     assert e.value == "not_an_int"
-    assert e.value_label == "default for parameter"
+    assert e.label == "default for parameter"
     assert e.error_name == "INVALID DEFAULT VALUE"
     assert "int" in str(e.expected).lower()
     assert isinstance(e, TypeError)

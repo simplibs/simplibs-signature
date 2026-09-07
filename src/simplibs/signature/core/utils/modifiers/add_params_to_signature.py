@@ -78,7 +78,7 @@ def add_params_to_signature(
     except ValueError as e:
         raise SignatureBuildError(
             error_name  = "SIGNATURE STRUCTURE ERROR",
-            value_label = "params_to_add",
+            label       = "params_to_add",
             value       = params_to_add,
             expected    = "parameters that form a valid Python signature",
             problem     = "The resulting signature structure is invalid (e.g. duplicate variadic parameters or invalid order).",
@@ -94,7 +94,7 @@ def add_params_to_signature(
     except TypeError as e:
         raise SignatureBuildError(
             error_name  = "SIGNATURE TYPE ERROR",
-            value_label = "parameters",
+            label       = "parameters",
             value       = ordered_params,
             expected    = "valid inspect.Parameter objects",
             problem     = "An unexpected type error occurred during signature reconstruction.",

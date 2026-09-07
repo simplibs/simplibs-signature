@@ -57,7 +57,7 @@ class ProcessParamSourcesMixin:
             else:
                 raise SignatureBuildError(
                     error_name  = "INVALID PARAMETER SOURCE",
-                    value_label = f"param_sources[{index}]",
+                    label       = f"param_sources[{index}]",
                     value       = item,
                     expected    = "an inspect.Parameter or a callable (function/method)",
                     problem     = (

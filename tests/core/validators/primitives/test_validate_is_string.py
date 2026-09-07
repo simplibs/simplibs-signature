@@ -38,7 +38,7 @@ def test_error_fields_are_correct():
 
     e = exc_info.value
     assert e.value == 123
-    assert e.value_label == "param_name"
+    assert e.label == "param_name"
     assert e.error_name == "INVALID ARGUMENT ERROR"
     assert isinstance(e, TypeError)
 
@@ -53,4 +53,4 @@ def test_default_value_name_is_name():
         validate_is_string(42)
 
     e = exc_info.value
-    assert e.value_label == "name"
+    assert e.label == "name"

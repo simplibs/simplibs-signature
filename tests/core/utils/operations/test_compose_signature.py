@@ -5,9 +5,9 @@ import pytest
 import inspect
 from typing import Any
 
-from src.simplibs.signature.core.utils.operations.compose_signature import compose_signature
-from src.simplibs.signature.core.validators.exceptions.SignatureBuildError import SignatureBuildError
-from src.simplibs.signature.core.validators.exceptions.SignatureParameterError import SignatureParameterError
+from simplibs.signature.core.utils.operations.compose_signature import compose_signature
+from simplibs.signature.core.validators.exceptions.SignatureBuildError import SignatureBuildError
+from simplibs.signature.core.validators.exceptions.SignatureParameterError import SignatureParameterError
 
 
 # -----------------------------------------------------------------------------

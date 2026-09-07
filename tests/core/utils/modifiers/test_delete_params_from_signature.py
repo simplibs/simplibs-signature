@@ -6,8 +6,8 @@ import pytest
 import inspect
 
 # Imports based on the provided project structure
-from src.simplibs.signature.core.utils.modifiers.delete_params_from_signature import delete_params_from_signature
-from src.simplibs.signature.core.validators.exceptions.SignatureParameterError import SignatureParameterError
+from simplibs.signature.core.utils.modifiers.delete_params_from_signature import delete_params_from_signature
+from simplibs.signature.core.validators.exceptions.SignatureParameterError import SignatureParameterError
 
 
 # -----------------------------------------------------------------------------

@@ -6,8 +6,8 @@ import inspect
 from typing import List, Any
 
 # Imports based on the provided project structure
-from src.simplibs.signature.core.utils.modifiers.replace_return_annotation_in_signature import replace_return_annotation_in_signature
-from src.simplibs.signature.core.validators.exceptions.SignatureParameterError import SignatureParameterError
+from simplibs.signature.core.utils.modifiers.replace_return_annotation_in_signature import replace_return_annotation_in_signature
+from simplibs.signature.core.validators.exceptions.SignatureParameterError import SignatureParameterError
 
 
 # -----------------------------------------------------------------------------

@@ -21,7 +21,7 @@ def validate_accept_double(
     if not accept_double:
         raise SignatureBuildError(
             error_name  = "DUPLICATE PARAMETER ERROR",
-            value_label = "param.name",
+            label       = "param.name",
             value       = param.name,
             expected    = "a unique parameter name",
             problem     = f"Parameter '{param.name}' is already defined in this signature.",

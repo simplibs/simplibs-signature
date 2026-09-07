@@ -29,7 +29,7 @@ def validate_param_sources(
     if not value:
         raise SignatureBuildError(
             error_name  = "SIGNATURE CREATOR ERROR",
-            value_label = f"{value_name}",
+            label       = f"{value_name}",
             value       = value,
             expected    = "at least one parameter source (Parameter or callable)",
             problem     = "SignatureCreator cannot build a signature — no parameter source was provided.",
@@ -48,7 +48,7 @@ def validate_param_sources(
         if not (isinstance(item, inspect.Parameter) or callable(item)):
             raise SignatureBuildError(
                 error_name  = "INVALID PARAMETER SOURCE",
-                value_label = f"{value_name}[{index}]",
+                label       = f"{value_name}[{index}]",
                 value       = item,
                 expected    = "inspect.Parameter or callable",
                 problem     = (

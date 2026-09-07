@@ -20,7 +20,7 @@ def validate_is_callable(
     if not callable(value):
         raise SignatureParameterError(
             error_name  = "INVALID ARGUMENT ERROR",
-            value_label = value_name,
+            label       = value_name,
             value       = value,
             expected    = "a callable object (function, method, lambda, or class with __call__)",
             problem     = f"'{value_name}' must be callable, but got {type(value).__name__!r}.",

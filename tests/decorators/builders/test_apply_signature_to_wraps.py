@@ -10,8 +10,8 @@ from typing import Callable
 pytest.importorskip("pytest_asyncio", reason="pytest-asyncio is required to run async wrapper tests")
 
 # Imports based on the provided project structure
-from src.simplibs.signature.decorators.builders.apply_signature_to_wraps import apply_signature_to_wraps
-from src.simplibs.signature.core.validators.exceptions.SignatureParameterError import SignatureParameterError
+from simplibs.signature.decorators.builders.apply_signature_to_wraps import apply_signature_to_wraps
+from simplibs.signature.core.validators.exceptions.SignatureParameterError import SignatureParameterError
 
 
 # -----------------------------------------------------------------------------

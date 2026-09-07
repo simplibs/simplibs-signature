@@ -42,6 +42,6 @@ def test_error_fields_are_correct():
 
     e = exc_info.value
     assert e.value == "not_a_bool"
-    assert e.value_label == "base_func_first"
+    assert e.label == "base_func_first"
     assert e.error_name == "INVALID ARGUMENT ERROR"
     assert isinstance(e, TypeError)  # Simplified check

@@ -6,8 +6,8 @@ import inspect
 from typing import Callable
 
 # Imports based on the provided project structure
-from src.simplibs.signature.core.utils.operations.set_signature import set_signature
-from src.simplibs.signature.core.validators.exceptions.SignatureParameterError import SignatureParameterError
+from simplibs.signature.core.utils.operations.set_signature import set_signature
+from simplibs.signature.core.validators.exceptions.SignatureParameterError import SignatureParameterError
 
 
 # -----------------------------------------------------------------------------
@@ -71,7 +71,7 @@ def test_set_signature_invalid_function_raises(empty_signature):
         set_signature("not_a_function", empty_signature)
 
     assert isinstance(exc_info.value, TypeError)
-    assert "function" in str(exc_info.value.value_label)
+    assert "function" in str(exc_info.value.label)
 
 
 def test_set_signature_invalid_signature_raises():
@@ -80,7 +80,7 @@ def test_set_signature_invalid_signature_raises():
         set_signature(sample_function, "not_a_signature")  # type: ignore
 
     assert isinstance(exc_info.value, TypeError)
-    assert "signature" in str(exc_info.value.value_label)
+    assert "signature" in str(exc_info.value.label)
 
 
 def test_set_signature_skip_validation():

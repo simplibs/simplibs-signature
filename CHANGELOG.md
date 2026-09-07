@@ -7,13 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.2.3] - 2026-09-07
+
+### 🐛 Fixed
+
+* **Root Exception `skip_locations` Field**:  
+  Renamed `_skip_locations` to `skip_locations` in `SignatureError` to align with 
+  the constructor contract of `simplibs-exception`. This ensures internal library 
+  stack frames are correctly filtered out from tracebacks, pointing diagnostics 
+  directly to user code.
+* **Migration to `simplibs-exception` v1.0+**:  
+  Renamed all deprecated `value_label` parameters/attributes across internal exception 
+  construction sites to `label` to conform with the updated `simplibs-exception` 1.0+ API.
+
+### 📋 Improved
+
+* **Core Dependency Update**:  
+  Upgraded `simplibs-exception` to `>=1.0.2` across project metadata to ensure 
+  full compatibility with modern exception reporting and typed context managers.
+
+---
+
 ## [0.2.2] - 2026-04-13
 
 ### Changed
 - **Documentation** — Updated README to reflect decorator rename: `signature_from` → `@signature`
   - Clarifies the public API and improves documentation accuracy
   - No functional changes to the library
-  - 
+
 ---
 
 ## [0.2.1] - 2026-04-13

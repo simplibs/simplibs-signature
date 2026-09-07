@@ -6,9 +6,9 @@ import inspect
 from typing import Any, Callable
 
 # Imports based on the provided project structure
-from src.simplibs.signature.core.signature_creator._mixins.ProcessParamSources import ProcessParamSourcesMixin
-from src.simplibs.signature.core.parameter_collector import ParameterCollector
-from src.simplibs.signature.core.validators.exceptions.SignatureBuildError import SignatureBuildError
+from simplibs.signature.core.signature_creator._mixins.ProcessParamSources import ProcessParamSourcesMixin
+from simplibs.signature.core.parameter_collector import ParameterCollector
+from simplibs.signature.core.validators.exceptions.SignatureBuildError import SignatureBuildError
 
 
 # -----------------------------------------------------------------------------

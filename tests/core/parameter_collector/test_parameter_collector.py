@@ -38,7 +38,7 @@ def test_collector_invalid_boolean_args_raise(param_name, invalid_value):
         ParameterCollector(**kwargs)
 
     assert isinstance(exc_info.value, TypeError)
-    assert param_name in str(exc_info.value.value_label)
+    assert param_name in str(exc_info.value.label)
 
 
 # -----------------------------------------------------------------------------

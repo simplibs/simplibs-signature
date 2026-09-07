@@ -10,8 +10,8 @@ from typing import Callable
 pytest.importorskip("pytest_asyncio", reason="pytest-asyncio is required for async decorator tests")
 
 # Imports based on the provided project structure
-from src.simplibs.signature.decorators.builders.create_signature_decorator import create_signature_decorator
-from src.simplibs.signature.core.validators.exceptions.SignatureParameterError import SignatureParameterError
+from simplibs.signature.decorators.builders.create_signature_decorator import create_signature_decorator
+from simplibs.signature.core.validators.exceptions.SignatureParameterError import SignatureParameterError
 
 
 # -----------------------------------------------------------------------------

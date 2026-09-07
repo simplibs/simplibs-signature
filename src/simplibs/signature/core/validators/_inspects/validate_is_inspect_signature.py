@@ -21,7 +21,7 @@ def validate_is_inspect_signature(
     if not isinstance(value, inspect.Signature):
         raise SignatureParameterError(
             error_name  = "INVALID ARGUMENT ERROR",
-            value_label = value_name,
+            label       = value_name,
             value       = value,
             expected    = "an instance of inspect.Signature",
             problem     = f"'{value_name}' must be inspect.Signature, but got {type(value).__name__!r}.",

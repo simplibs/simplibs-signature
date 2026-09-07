@@ -7,9 +7,9 @@ from typing import Callable, List, Optional
 from simplibs.sentinels import UNSET
 
 # Imports based on the provided project structure
-from src.simplibs.signature.core.signature_creator.SignatureCreator import SignatureCreator
-from src.simplibs.signature.core.validators.exceptions.SignatureBuildError import SignatureBuildError
-from src.simplibs.signature.core.validators.exceptions.SignatureParameterError import SignatureParameterError
+from simplibs.signature.core.signature_creator.SignatureCreator import SignatureCreator
+from simplibs.signature.core.validators.exceptions.SignatureBuildError import SignatureBuildError
+from simplibs.signature.core.validators.exceptions.SignatureParameterError import SignatureParameterError
 
 
 # -----------------------------------------------------------------------------

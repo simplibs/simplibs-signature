@@ -30,7 +30,7 @@ def validate_parameters_collection(
     except TypeError as e:
         raise SignatureParameterError(
             error_name  = "INVALID ARGUMENT ERROR",
-            value_label = value_name,
+            label       = value_name,
             value       = value,
             expected    = "an iterable collection (list, tuple, etc.)",
             problem     = f"'{value_name}' must be iterable, but got {type(value).__name__!r}.",
@@ -46,7 +46,7 @@ def validate_parameters_collection(
         if not isinstance(param, inspect.Parameter):
             raise SignatureParameterError(
                 error_name  = "INVALID PARAMETER ITEM",
-                value_label = f"{value_name}[{index}]",
+                label       = f"{value_name}[{index}]",
                 value       = param,
                 expected    = "an instance of inspect.Parameter",
                 problem     = (

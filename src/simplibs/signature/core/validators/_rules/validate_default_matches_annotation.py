@@ -36,7 +36,7 @@ def validate_default_matches_annotation(
         if not isinstance(default_value, annotation):
             raise SignatureParameterError(
                 error_name  = "INVALID DEFAULT VALUE",
-                value_label = "default for parameter",
+                label       = "default for parameter",
                 value       = default_value,
                 expected    = f"value of type {annotation.__name__}",
                 problem     = f"The default value does not match its annotation {annotation.__name__!r}.",

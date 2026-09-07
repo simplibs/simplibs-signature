@@ -39,7 +39,7 @@ def test_accept_double_false_raises_signature_build_error():
     e = exc_info.value
     assert e.error_name == "DUPLICATE PARAMETER ERROR"
     assert e.value == "duplicate_param"
-    assert e.value_label == "param.name"
+    assert e.label == "param.name"
     assert "already defined" in e.problem
     assert e.exception is ValueError
 

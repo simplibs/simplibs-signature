@@ -27,7 +27,7 @@ def validate_excluded_names(
     if isinstance(value, str) or not isinstance(value, Iterable):
         raise SignatureParameterError(
             error_name  = "INVALID ARGUMENT ERROR",
-            value_label = f"{value_name}",
+            label       = f"{value_name}",
             value       = value,
             expected    = "an iterable of strings (e.g. list, tuple, or set)",
             problem     = (
@@ -48,7 +48,7 @@ def validate_excluded_names(
         if not isinstance(item, str):
             raise SignatureParameterError(
                 error_name  = "INVALID ARGUMENT ERROR",
-                value_label = f"{value_name}[{i}]",
+                label       = f"{value_name}[{i}]",
                 value       = item,
                 expected    = "a string (parameter name)",
                 problem     = (

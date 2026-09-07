@@ -9,8 +9,8 @@ import asyncio
 pytest.importorskip("pytest_asyncio", reason="pytest-asyncio is required for async decorator tests")
 
 # Imports based on the provided project structure
-from src.simplibs.signature.decorators.signature_set import signature_set
-from src.simplibs.signature.core.validators.exceptions.SignatureParameterError import SignatureParameterError
+from simplibs.signature.decorators.signature_set import signature_set
+from simplibs.signature.core.validators.exceptions.SignatureParameterError import SignatureParameterError
 
 
 # -----------------------------------------------------------------------------

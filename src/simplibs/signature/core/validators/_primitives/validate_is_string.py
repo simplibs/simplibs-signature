@@ -20,7 +20,7 @@ def validate_is_string(
     if not isinstance(value, str):
         raise SignatureParameterError(
             error_name  = "INVALID ARGUMENT ERROR",
-            value_label = value_name,
+            label       = value_name,
             value       = value,
             expected    = "a string (str)",
             problem     = f"'{value_name}' must be a string, but got {type(value).__name__!r}.",

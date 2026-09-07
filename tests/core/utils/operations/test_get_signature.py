@@ -7,9 +7,9 @@ import sys
 from typing import Callable
 
 # Imports based on the provided project structure
-from src.simplibs.signature.core.utils.operations.get_signature import get_signature
-from src.simplibs.signature.core.validators.exceptions.SignatureBuildError import SignatureBuildError
-from src.simplibs.signature.core.validators.exceptions.SignatureParameterError import SignatureParameterError
+from simplibs.signature.core.utils.operations.get_signature import get_signature
+from simplibs.signature.core.validators.exceptions.SignatureBuildError import SignatureBuildError
+from simplibs.signature.core.validators.exceptions.SignatureParameterError import SignatureParameterError
 
 
 # -----------------------------------------------------------------------------
@@ -55,7 +55,7 @@ def test_get_signature_non_callable_raises():
         get_signature("I am not a function") # type: ignore
 
     assert isinstance(exc_info.value, TypeError)
-    assert "function" in str(exc_info.value.value_label)
+    assert "function" in str(exc_info.value.label)
 
 
 def test_get_signature_introspection_value_error():

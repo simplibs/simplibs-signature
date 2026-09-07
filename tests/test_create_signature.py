@@ -8,9 +8,9 @@ from typing import Optional, List
 from simplibs.sentinels import UNSET
 
 # Imports based on the provided project structure
-from src.simplibs.signature.create_signature import create_signature
-from src.simplibs.signature.core.validators.exceptions.SignatureBuildError import SignatureBuildError
-from src.simplibs.signature.core.validators.exceptions.SignatureParameterError import SignatureParameterError
+from simplibs.signature.create_signature import create_signature
+from simplibs.signature.core.validators.exceptions.SignatureBuildError import SignatureBuildError
+from simplibs.signature.core.validators.exceptions.SignatureParameterError import SignatureParameterError
 
 
 # -----------------------------------------------------------------------------

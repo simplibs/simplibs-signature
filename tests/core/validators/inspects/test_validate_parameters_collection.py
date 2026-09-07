@@ -103,7 +103,7 @@ def test_container_error_fields_for_non_iterables():
 
     e = exc_info.value
     assert e.value == invalid_input
-    assert e.value_label == "my_params"
+    assert e.label == "my_params"
     assert e.error_name == "INVALID ARGUMENT ERROR"
 
 
@@ -117,7 +117,7 @@ def test_item_error_fields_include_index_and_type():
 
     e = exc_info.value
     assert e.value == "invalid_item"
-    assert e.value_label == "params[2]"
+    assert e.label == "params[2]"
     assert "str" in str(e.problem)
     assert e.error_name == "INVALID PARAMETER ITEM"
 
@@ -131,4 +131,4 @@ def test_default_value_name_is_parameters():
     with pytest.raises(SignatureParameterError) as exc_info:
         validate_parameters_collection([1, 2, 3])
 
-    assert exc_info.value.value_label == "parameters[0]"
+    assert exc_info.value.label == "parameters[0]"
