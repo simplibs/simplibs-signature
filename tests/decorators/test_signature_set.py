@@ -1,106 +1,59 @@
-"""
-Tests for @signature_set — assigning pre-constructed signatures to functions.
-"""
-import pytest
-import inspect
 import asyncio
+import inspect
 
-# Ensure pytest-asyncio is installed for async decorator tests
-pytest.importorskip("pytest_asyncio", reason="pytest-asyncio is required for async decorator tests")
+from simplibs.signature import signature_set
 
-# Imports based on the provided project structure
-from simplibs.signature.decorators.signature_set import signature_set
-from simplibs.signature.core.validators.exceptions.SignatureParameterError import SignatureParameterError
+P = inspect.Parameter
 
 
-# -----------------------------------------------------------------------------
-# Fixtures & Helpers
-# -----------------------------------------------------------------------------
-
-@pytest.fixture
-def simple_sig():
-    """A pre-constructed signature: (x: int, y: str = 'default') -> bool"""
-    params = [
-        inspect.Parameter("x", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=int),
-        inspect.Parameter("y", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=str, default="default"),
-    ]
-    return inspect.Signature(params, return_annotation=bool)
+def _signature():
+    return inspect.Signature([P("only", P.KEYWORD_ONLY)], return_annotation=int)
 
 
-# -----------------------------------------------------------------------------
-# Basic Assignment
-# -----------------------------------------------------------------------------
+def test_attaches_the_given_signature():
+    @signature_set(_signature())
+    def function(a, b):
+        ...
 
-def test_signature_set_assigns_correctly(simple_sig):
-    """Should strictly assign the provided signature to a target function."""
-
-    @signature_set(simple_sig)
-    def my_func(*args, **kwargs):
-        return True
-
-    sig = inspect.signature(my_func)
-    assert sig == simple_sig
-    assert list(sig.parameters.keys()) == ["x", "y"]
-    assert sig.return_annotation is bool
-    # Test execution
-    assert my_func(10, y="hello") is True
+    assert inspect.signature(function) == _signature()
 
 
-def test_signature_set_works_as_shared_constant(simple_sig):
-    """Should allow using the same signature instance for multiple functions."""
+def test_the_original_function_is_not_modified():
+    def function(a, b):
+        ...
 
-    @signature_set(simple_sig)
-    def func_a(x, y): pass
+    signature_set(_signature())(function)
 
-    @signature_set(simple_sig)
-    def func_b(x, y): pass
-
-    assert inspect.signature(func_a) == inspect.signature(func_b) == simple_sig
+    assert str(inspect.signature(function)) == "(a, b)"
+    assert not hasattr(function, "__signature__")
 
 
-# -----------------------------------------------------------------------------
-# Async Support
-# -----------------------------------------------------------------------------
+def test_the_wrapper_still_works():
+    @signature_set(_signature())
+    def function(a, b):
+        return a + b
 
-@pytest.mark.asyncio
-async def test_signature_set_on_async_function(simple_sig):
-    """Should correctly apply a signature to an async function and preserve awaitability."""
-
-    @signature_set(simple_sig)
-    async def my_async_func(x, y):
-        await asyncio.sleep(0)
-        return True
-
-    # Check signature
-    assert inspect.signature(my_async_func) == simple_sig
-
-    # Check async nature
-    assert inspect.iscoroutinefunction(my_async_func)
-
-    # Check execution
-    result = await my_async_func(1, "test")
-    assert result is True
+    assert function(1, 2) == 3
 
 
-# -----------------------------------------------------------------------------
-# Validation & Error Handling
-# -----------------------------------------------------------------------------
+def test_one_decorator_serves_many_functions():
+    decorator = signature_set(_signature())
 
-def test_signature_set_raises_on_invalid_input():
-    """Should raise SignatureParameterError if the input is not an inspect.Signature."""
+    first, second = decorator(lambda: 1), decorator(lambda: 2)
 
-    # Case 1: Passing a function instead of a signature
-    with pytest.raises(SignatureParameterError):
-        signature_set(lambda x: x)  # type: ignore
-
-    # Case 2: Passing a string
-    with pytest.raises(SignatureParameterError):
-        signature_set("not-a-signature")  # type: ignore
+    assert inspect.signature(first) == inspect.signature(second) == _signature()
 
 
-def test_signature_set_decorator_validates_target_callable(simple_sig):
-    """The returned decorator should raise an error if applied to a non-callable."""
-    decorator = signature_set(simple_sig)
+def test_a_coroutine_function_stays_awaitable():
+    @signature_set(_signature())
+    async def function():
+        return 5
 
-    with pytest.raises(SignatureParameterError):
-        decorator("not-a-callable")  # type: ignore
+    assert inspect.iscoroutinefunction(function)
+    assert asyncio.run(function()) == 5
+
+
+def test_validation_switch_is_accepted():
+    decorator = signature_set(_signature(), _validate_call=False)
+
+    assert decorator(lambda: 1)() == 1

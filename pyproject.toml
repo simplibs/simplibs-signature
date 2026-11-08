@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=77.0.3"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "simplibs-signature"
-version = "0.2.3"
+version = "0.3.0"
 description = "Lightweight utilities for dynamic and declarative function signature manipulation, inspection, and validation."
 readme = "README.md"
 license = "MIT"
@@ -31,8 +31,9 @@ classifiers = [
     "Topic :: Software Development :: Quality Assurance",
 ]
 dependencies = [
-    "simplibs-exception>=0.2.0",
-    "simplibs-sentinels>=0.1.0",
+    "simplibs-exception>=1.1.4",
+    "simplibs-sentinels>=0.2.0",
+    "simplibs-validate>=0.4.1",
 ]
 
 [[project.authors]]
@@ -47,14 +48,25 @@ Changelog = "https://github.com/simplibs/simplibs-signature/blob/main/CHANGELOG.
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.0",
-    "pytest-asyncio>=0.21.0",
+    "pytest>=9.0",
+    "pytest-cov>=5.0",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-addopts = "-v"
+addopts = "-v -rs"                                # -rs lists every skipped test with its reason
+
+[tool.coverage.run]
+branch = true
+source = ["simplibs.signature"]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"simplibs.signature" = ["py.typed"]               # without this section py.typed is NOT in the wheel

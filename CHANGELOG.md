@@ -7,6 +7,97 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.3.0] - 2026-11-07
+
+A rewrite of the internals to the current simplibs style. The everyday API is the same
+(`@signature`, `@signature_copy`, `create_signature`, `copy_signature`, the modifiers and
+the parameter creators), but some names changed and the exceptions are different, so please
+read the **Breaking** section before upgrading.
+
+### ⚠️ Breaking
+
+* **Exceptions**:
+  The library no longer defines its own exceptions (`SignatureError`, `SignatureBuildError`,
+  `SignatureParameterError` are gone). Every error is now a `ParamError` card from
+  `simplibs-exception`. Where a card wraps a standard exception, that type is in its MRO,
+  so `except ValueError`, `except TypeError` and `except SyntaxError` keep working.
+* **`validate` → `_validate_call`**:
+  The `validate` switch is replaced by the reserved `_validate_call` of `@validate_call`
+  from `simplibs-validate`. `False` skips the validation of the arguments of that call.
+  Argument validation itself is now done by `@validate_call` on every public function.
+* **Removed classes and helpers**:
+  `SignatureCreator` and its mixins, `validate_signature_params()` and
+  `validate_is_inspect_signature()` no longer exist. `create_signature` is a plain function
+  built on `ParameterCollector`.
+* **Constants**:
+  `BINDING_NAMES` is now an internal `frozenset` and is no longer exported; `VARIADIC_NAMES`
+  is removed (see *Changed*, `include_variadic`).
+* **`include_variadic=False` now works by kind**:
+  It leaves out every `*args` and `**kwargs` whatever they are called (`*a`, `**options`),
+  where it used to match only the names `args` and `kwargs`.
+
+### ✨ Added
+
+* **`ParameterCollector` is public**:
+  Exported from the package root, with `add_param`, `add_params` and `get_ordered_params`.
+* **One slot per variadic kind**:
+  A second `*args` (or `**kwargs`) under another name is a collision and is settled by
+  `accept_double` / `replace_double`. Before, `(*a, *b)` could be built, because `inspect`
+  accepts it.
+* **Collision messages for variadics**:
+  `DUPLICATE PARAMETER ERROR` names the stored variadic it collides with.
+* **Documentation**:
+  A new main README and four detailed READMEs in `docs/` (decorators, orchestrators,
+  parameter collector, tools), with a look "under the hood" for every function.
+
+### 🔄 Changed
+
+* **Package structure**:
+  Reorganised into `collector`, `constants`, `decorators`, `orchestrators` and `tools`
+  (`parameters`, `operations`, `modifiers`). Only the root `__init__` defines `__all__`;
+  the sub-packages use plain imports. Each layer imports only from the layers before it.
+* **`compose_signature` always validates the structure**:
+  It no longer passes the undocumented `__validate_parameters__=False` to `inspect`.
+  `_validate_call` controls only `@validate_call`. A duplicate name can no longer be merged
+  silently.
+* **Iterables are read once**:
+  `compose_signature` and `add_params_to_signature` turn their input into a tuple first, so
+  an error card shows the parameters that failed instead of an exhausted generator.
+* **Any iterable, also a generator**:
+  Every public function with an `Iterable[...]` parameter (`excepts`, `extras`, `excluded_names`,
+  `extra_params`, `params_to_add`, `parameters`) uses `@validate_call(materialize_iterators=True)`: a list, a
+  tuple, a set or a generator works, and a generator is read once and arrives as a tuple. Variadic parameters
+  are annotated naturally (`*params: inspect.Parameter | Callable`).
+* **Flat mode**:
+  `replace_double=False` keeps both colliding parameters and renames the later one
+  (`name_1`, `name_2`, ...). This is now documented on every public function.
+* **`raise_invalid_parameter_order_error`**:
+  Uses the same `label` (`param.name`) as the duplicate error.
+
+### 🐛 Fixed
+
+* **Stale name index after a replacement**:
+  The collector forgets the name of a replaced parameter, so a later real parameter with
+  that name is no longer taken for a duplicate.
+* **Misleading messages**:
+  `raise_invalid_parameter_source_error` now suggests `create_signature(*my_list)`;
+  `raise_signature_structure_value_error` no longer advises on a "second `*args`".
+
+### 📋 Improved
+
+* **Design notes and docstrings**:
+  Every module, including every `__init__`, has `_DESIGN_NOTES` with its purpose and, for
+  the packages, a table of its components. All public functions have complete docstrings.
+* **Tests**:
+  Rewritten in a structure that mirrors the sources (about 380 tests). Errors are tested
+  with `assert_exception_function` from `simplibs-exception`.
+* **Dependencies**:
+  Now builds on `simplibs-exception`, `simplibs-validate` and `simplibs-sentinels`. It needs
+  `simplibs-validate>=0.4.1` (natural `*args` annotations, `materialize_iterators` and parameters whose
+  default is `inspect.Parameter.empty`).
+
+---
+
 ## [0.2.3] - 2026-09-07
 
 ### 🐛 Fixed

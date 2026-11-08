@@ -1,379 +1,359 @@
-# simplibs-signature
+# ✒️ `simplibs-signature`
 
-> Lightweight utilities for dynamic and declarative function signature manipulation.
-> Inspect, copy, assemble, and apply `inspect.Signature` objects — with a clean
-> API and no magic.
+[![PyPI](https://img.shields.io/pypi/v/simplibs-signature)](https://pypi.org/project/simplibs-signature/)
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/downloads/)
+[![Licence](https://img.shields.io/badge/licence-MIT-green)](https://github.com/simplibs/simplibs-signature/blob/main/LICENSE)
+[![tests](https://github.com/simplibs/simplibs-signature/actions/workflows/tests.yml/badge.svg)](https://github.com/simplibs/simplibs-signature/actions)
 
-![Python](https://img.shields.io/badge/python-3.11%2B-blue)
-![Licence](https://img.shields.io/badge/licence-MIT-green)
-![PyPI](https://img.shields.io/pypi/v/simplibs-signature)
+**Say what a wrapper really accepts — and let tools believe it.**
+
+A Python library for building, copying and changing the **signature** of a function. A wrapper that
+takes `(*args, **kwargs)` hides everything from your editor, from `help()` and from documentation
+generators; this library gives it the signature it *really* has — copied from the function it wraps,
+assembled from parameters and other functions, or written by hand — and keeps it **valid**: the
+parameters always end up in the order Python requires, a name is never there twice, and a second
+`*args` can never sneak in. A wrong call is a structured card that says what and how to fix it.
+
 ```python
-# Assemble a signature from multiple sources
-sig = create_signature(extra_param, base_func=my_func)
+import inspect
+from simplibs.signature import signature_copy
 
-# Or use the decorator shorthand
-@signature(extra_param, base_func_first=False)
-def my_func(*args, **kwargs):
+def original(a: int, b: str = "x", *args, **kwargs) -> bool: ...
+
+@signature_copy(original, excepts=["b"])
+def wrapper(*args, **kwargs):
     ...
 
-@signature_copy(MyClass.__init__, return_type=MyClass)
-def create(*args, **kwargs):
-    ...
+str(inspect.signature(wrapper))     # -> '(a: int, *args, **kwargs) -> bool'
+```
+
+> The decorators change only what `inspect` **reports**. They do not check or change how the wrapper
+> is called — the call goes through unchanged. The signature describes the call; it does not enforce it.
+
+---
+
+## 🧭 The Core Philosophy
+
+Writing a signature by hand means `inspect.Parameter("x", inspect.Parameter.KEYWORD_ONLY, ...)` four
+times over, then finding the right place for each parameter — required before optional, `*args` before
+the keyword-only ones, never anything after `**kwargs` — and `inspect.Signature` itself checks
+surprisingly little: it accepts `(*a, *b)` without a word. `simplibs-signature` takes the chore over:
+
+* **A signature is built, not patched.** Every parameter goes through one **collector** that keeps
+  the order valid whatever the order you add them in. You say *what* goes in, never *where*.
+* **Sources in, priority by order.** A source is an `inspect.Parameter` or any callable (all its
+  parameters are taken). Sources are merged in the order given, and with the default settings the
+  **later one wins** a name collision — so the order of your arguments is the priority.
+* **One `*args`, one `**kwargs`.** A signature holds one of each. A second one is a collision even
+  under another name (`*a` after `*args`) and is settled by the same rules as any duplicate.
+* **Nothing is changed behind your back.** The decorators wrap, the modifiers return a new
+  signature, the original stays as it was. The one function that changes an object in place says so
+  in its name: `set_signature`.
+* **Names are filtered by what they are.** `include_variadic=False` leaves out every `*args` and
+  `**kwargs` by their *kind*, however they are called; `self` and `cls`, which have no kind of their
+  own, are recognised by name.
+* **Functions first, decorators on top.** The logic lives in functions you can call on their own;
+  the decorators are thin wrappers over them.
+* **Every error is a card.** A wrong call is a `ParamError` from
+  [`simplibs-exception`](https://pypi.org/project/simplibs-exception/) — what was given, what was
+  expected, how to fix it — and it points at **your** code, not at the library's insides.
+* **Layers that only look left.** `constants` ← `collector` ← `tools` ← `orchestrators` ←
+  `decorators` — every layer imports only from those before it.
+
+```python
+create_signature(f, g, accept_double=False)    # -> raises: DUPLICATE PARAMETER ERROR — 'rest' collides with the already defined variadic positional parameter 'args'
+create_signature(f, 5)                         # -> raises: ValidationError — a source must be a Parameter or a callable
 ```
 
 ---
 
-## Contents
+## 📦 Installation
 
-- [Installation](#installation)
-- [Quick start](#quick-start)
-- [Decorators](#decorators)
-- [Signature operations](#signature-operations)
-- [Parameter creators](#parameter-creators)
-- [SignatureCreator](#signaturecreator)
-- [Constants](#constants)
-- [About the simplibs ecosystem](#about-the-simplibs-ecosystem)
-
----
-
-## Installation
 ```bash
 pip install simplibs-signature
 ```
-```python
-from simplibs.signature import create_signature, signature, signature_copy
-```
 
-> Note: This library automatically installs `simplibs-exception` and
-> `simplibs-sentinels` as core dependencies.
-
----
-
-## Quick start
-
-The library is built around `SignatureCreator` — a class that assembles an
-`inspect.Signature` from any combination of callables and `inspect.Parameter`
-instances. Its direct functional interface is `create_signature`, which accepts
-identical parameters and returns the assembled signature without exposing the
-builder instance.
-
-On top of that, the library provides a set of utilities for working with
-signatures directly — retrieving, copying, applying — and two decorators,
-`signature_copy` and `signature`, that cover the most common use cases
-in a compact one-liner form.
-
-### Assemble a signature programmatically
-```python
-from simplibs.signature import create_signature, create_keyword_parameter
-
-extra = create_keyword_parameter("timeout", annotation=int, default=30)
-
-sig = create_signature(extra, base_func=my_func)
-# → (host: str, port: int, *, timeout: int = 30)
-```
-
-### Copy a signature from an existing function
-```python
-from simplibs.signature import signature_copy
-
-class MyClass:
-    def __init__(self, name: str, value: int = 0):
-        ...
-
-@signature_copy(MyClass.__init__, return_type=MyClass)
-def create(*args, **kwargs):
-    return MyClass(*args, **kwargs)
-
-# create now reports: (name: str, value: int = 0, **kwargs) -> MyClass
-```
-
-### Merge parameters from multiple sources
-```python
-from simplibs.signature import signature, create_keyword_parameter
-
-extra = create_keyword_parameter("timeout", annotation=int, default=30)
-
-@signature(extra)
-def connect(host: str, port: int):
-    ...
-
-# connect now reports: (host: str, port: int, *, timeout: int = 30)
-```
+Requires Python 3.11+. Runtime dependencies: [`simplibs-exception`](https://pypi.org/project/simplibs-exception/)
+(the error cards), [`simplibs-validate`](https://pypi.org/project/simplibs-validate/)
+(`@validate_call` on every public function) and [`simplibs-sentinels`](https://pypi.org/project/simplibs-sentinels/)
+(`UNSET`, the marker of "not given" — `None` is a valid return annotation, so it cannot play that part).
 
 ---
 
-## Decorators
+## 🚀 Quick Start in 60 Seconds
 
-The two main decorators — the primary public interface of the library.
+### Level 1: Give a wrapper the signature it really has
 
-### signature_copy
-
-Copies and normalises a signature from an existing callable onto the decorated
-function. Always removes `self`/`cls` and appends `**kwargs`.
 ```python
-from simplibs.signature import signature_copy
+import inspect
+from simplibs.signature import signature, signature_copy, signature_set
+from simplibs.signature import create_keyword_parameter, create_positional_parameter
 
-@signature_copy(base_func, return_type=MyClass)
-def my_func(*args, **kwargs):
-    ...
+def original(a: int, b: str = "x", *args, **kwargs) -> bool: ...
+
+# copy another function's signature, with changes
+@signature_copy(original, excepts=["b"])
+def wrapper(*args, **kwargs): ...
+str(inspect.signature(wrapper))       # -> '(a: int, *args, **kwargs) -> bool'
+
+# start from the function itself and add to it
+@signature(create_keyword_parameter("timeout", annotation=float, default=3.0), returns=int)
+def fetch(url: str, *, retries: int = 2): ...
+str(inspect.signature(fetch))         # -> '(url: str, *, retries: int = 2, timeout: float = 3.0) -> int'
+
+# or attach a finished signature
+fixed = inspect.Signature([
+    create_positional_parameter("x", annotation=int),
+    create_keyword_parameter("verbose", annotation=bool, default=False),
+])
+
+@signature_set(fixed)
+def anything(*args, **kwargs): ...
+str(inspect.signature(anything))      # -> '(x: int, *, verbose: bool = False)'
 ```
 
-| Parameter     | Type                            | Description                                                                        |
-|---------------|---------------------------------|------------------------------------------------------------------------------------|
-| `base_func`   | `Callable`                      | The function or method whose signature is copied                                   |
-| `return_type` | `type \| None \| UNSET`         | Override the return annotation. `UNSET` preserves the original, `None` removes it |
+### Level 2: Build a signature from any mix of sources
 
-### signature
-
-Assembles a new signature from the decorated function and any additional
-parameter sources. The decorated function becomes `base_func`.
 ```python
-from simplibs.signature import signature
+import inspect
+from simplibs.signature import create_signature, copy_signature
 
-@signature(param_or_func, ..., base_func_first=True)
-def my_func(*args, **kwargs):
-    ...
+def f(a, *args, b=1): ...
+def g(c, *rest): ...
+
+create_signature(f, g)                                # -> (a, c, *rest, b=1)      the later *rest replaces *args
+create_signature(f, g, replace_double=False)          # -> (a, c, *args, b=1)      the earlier one stays
+create_signature(f, g, include_variadic=False)        # -> (a, c, *, b=1)
+create_signature(f, g, flat_to_kwargs=True)           # -> (*, a, b=1, c)          everything keyword-only
+create_signature(f, return_source=int)                # -> (a, *args, b=1) -> int
+
+copy_signature(g, extra_params=[inspect.Parameter("z", inspect.Parameter.KEYWORD_ONLY)])   # -> (c, *rest, z)
 ```
 
-| Parameter        | Type                                  | Description                                                                        |
-|------------------|---------------------------------------|------------------------------------------------------------------------------------|
-| `*sources`       | `inspect.Parameter \| Callable`       | Parameters or callables to merge into the signature                                |
-| `excluded_names` | `tuple[str, ...]`                     | Parameter names to exclude                                                         |
-| `return_type`    | `type \| Callable \| None \| UNSET`   | Return annotation. If `UNSET` and `base_func` has one, it is inherited             |
-| `base_func_first`| `bool`                                | If `True`, decorated function's parameters come first (default: `True`)            |
-| `accept_double`  | `bool`                                | If `True`, duplicate parameter names are silently skipped (default: `True`)        |
+### Level 3: Change a signature you already have
+
+```python
+import inspect
+from simplibs.signature import (
+    add_params_to_signature, delete_params_from_signature, replace_return_annotation_in_signature,
+    create_keyword_parameter,
+)
+
+sig = inspect.signature(original)       # (a: int, b: str = 'x', *args, **kwargs) -> bool
+
+add_params_to_signature(sig, [create_keyword_parameter("dry_run", annotation=bool, default=False)])
+# -> (a: int, b: str = 'x', *args, dry_run: bool = False, **kwargs) -> bool
+
+delete_params_from_signature(sig, ["b", "kwargs"])           # -> (a: int, *args) -> bool
+replace_return_annotation_in_signature(sig, int)             # -> (a: int, b: str = 'x', *args, **kwargs) -> int
+```
+
+### Level 4: The collector, when you want full control
+
+```python
+from simplibs.signature import ParameterCollector, compose_signature
+
+collector = ParameterCollector(include_variadic=False)
+collector.add_params(inspect.signature(original).parameters.values())
+
+[p.name for p in collector.get_ordered_params()]             # -> ['a', 'b']
+compose_signature(collector.get_ordered_params(), int)       # -> (a: int, b: str = 'x') -> int
+```
 
 ---
 
-## Signature operations
+## 🛠️ Architecture & Package Structure
 
-Lower-level tools for working with `inspect.Signature` objects directly.
-
-### get_signature
-
-Safely retrieves an `inspect.Signature` from any callable. Converts Python's
-raw `ValueError` and `TypeError` into structured `SignatureBuildError` instances:
-```python
-from simplibs.signature import get_signature
-
-sig = get_signature(my_func)
+```
+src/simplibs/signature/
+├── constants/            ◄── ARGS, KWARGS — ready-made *args and **kwargs parameters
+├── collector/            ◄── ParameterCollector — one valid, ordered set of parameters
+├── tools/                ◄── The small building blocks
+│   ├── parameters/       ◄── create_keyword_parameter, create_positional_parameter
+│   ├── operations/       ◄── get_signature, set_signature, compose_signature
+│   └── modifiers/        ◄── add_params_to_signature, delete_params_from_signature, replace_return_annotation_in_signature
+├── orchestrators/        ◄── create_signature, copy_signature — the high-level builders
+└── decorators/           ◄── signature, signature_copy, signature_set (+ builders)
 ```
 
-### set_signature
+Everything public is importable straight from `simplibs.signature`:
 
-Assigns an `inspect.Signature` directly to a function via `__signature__`.
-Returns the original function — allows inline assignment:
 ```python
-from simplibs.signature import set_signature
-
-set_signature(my_func, my_signature)
-```
-
-### create_copy_signature
-
-Creates a modified copy of a signature from a callable — the lower-level
-counterpart to `signature_copy`. Use when you need full control over
-normalisation or want the `inspect.Signature` object directly rather than
-a decorator:
-```python
-from simplibs.signature import create_copy_signature
-from simplibs.sentinels import UNSET
-
-sig = create_copy_signature(
-    MyClass.__init__,
-    return_type = MyClass,   # override return annotation
-    normalize   = True,      # remove self/cls, append **kwargs (default: True)
+from simplibs.signature import (
+    signature, signature_copy, signature_set,        # decorators
+    create_signature, copy_signature,                # builders
+    ParameterCollector,                              # the collector
+    get_signature, set_signature, compose_signature, # operations
+    add_params_to_signature, delete_params_from_signature, replace_return_annotation_in_signature,
+    create_positional_parameter, create_keyword_parameter,
+    apply_signature_to_wraps, create_signature_decorator,
+    ARGS, KWARGS,
 )
 ```
 
-### apply_signature_to_wraps
+### The options every builder shares
 
-Creates a new wrapper around a function and assigns a custom signature to it.
-The building block for decorators — use when you need a new callable, not just
-a modified one:
-```python
-from simplibs.signature import apply_signature_to_wraps
+The same options mean the same thing in `create_signature`, `copy_signature`, the decorators and — where
+they are offered — the modifiers and the collector itself.
 
-wrapped = apply_signature_to_wraps(my_func, my_signature)
-```
+| Option             | Default | Meaning                                                                          |
+|--------------------|---------|----------------------------------------------------------------------------------|
+| `accept_double`    | `True`  | If `False`, a name collision raises a `ParamError`. If `True`, `replace_double` decides. |
+| `replace_double`   | `True`  | Who wins a collision: the **later** parameter (`True`) or the **earlier** one (`False`). |
+| `include_variadic` | `True`  | If `False`, every `*args` and `**kwargs` is left out, whatever it is called.      |
+| `include_binding`  | `True`  | If `False`, parameters named `self` and `cls` are left out.                        |
+| `flat_to_kwargs`   | `False` | Everything keyword-only; `*args` dropped, all `**kwargs` merged into one.          |
+| `_validate_call`   | `True`  | Reserved switch of `@validate_call`: `False` skips the validation of the arguments. |
 
-### create_signature_decorator
-
-Produces a reusable decorator from an `inspect.Signature`. Use when the same
-signature needs to be applied to multiple functions:
-```python
-from simplibs.signature import create_signature_decorator
-
-decorator = create_signature_decorator(my_signature)
-
-@decorator
-def func_a(*args, **kwargs): ...
-
-@decorator
-def func_b(*args, **kwargs): ...
-```
+Parameters that take several values — `excepts`, `extras`, `excluded_names`, `extra_params`,
+`params_to_add`, `parameters` — accept **any iterable**: a list, a tuple, a set or a generator.
+Every public function with such a parameter is decorated with
+`@validate_call(materialize_iterators=True)` (from `simplibs-validate`), so a generator is read once
+and the function receives a tuple that it can read again; its items are still validated. With
+`_validate_call=False` nothing is validated or converted, so pass a list or a tuple there.
 
 ---
 
-## Parameter creators
+## 🎀 `decorators/` — Give a wrapper its real signature
 
-Convenience factories for building `inspect.Parameter` instances without
-touching the `inspect` module directly.
+Three decorators that differ in **where the signature comes from**, and the two builders they are made of.
+Each returns a transparent wrapper — sync or async, as the function is — that reports the new signature
+to `inspect`, and leaves the original function untouched.
 
-### create_positional_parameter
-```python
-from simplibs.signature import create_positional_parameter
+| Name                         | Description / Parameters                                                                                          |
+|------------------------------|-------------------------------------------------------------------------------------------------------------------|
+| `signature`                  | Assembles the signature from sources and, by default, the function itself (`*params`, `returns`, `excepts`, `use_func`, `func_first`, + shared options). |
+| `signature_copy`             | Copies another callable's signature, with changes (`base_func`, `returns`, `extras`, `excepts`, + shared options).  |
+| `signature_set`              | Attaches a finished `inspect.Signature` (`signature`).                                                              |
+| `create_signature_decorator` | Turns a finished signature into a reusable decorator (`signature`).                                                 |
+| `apply_signature_to_wraps`   | Wraps one function in a transparent wrapper with a given signature (`function`, `signature`).                       |
 
-param = create_positional_parameter("name", annotation=str)
-param = create_positional_parameter("x", annotation=int, default=0, positional_only=True)
-```
-
-### create_keyword_parameter
-```python
-from simplibs.signature import create_keyword_parameter
-
-param = create_keyword_parameter("timeout", annotation=int, default=30)
-```
-
-Both factories accept:
-
-| Parameter         | Type    | Description                                                                        |
-|-------------------|---------|------------------------------------------------------------------------------------|
-| `name`            | `str`   | Parameter name                                                                     |
-| `annotation`      | `type`  | Type annotation — omit for no annotation                                           |
-| `default`         | `Any`   | Default value — omit for no default                                                |
-| `positional_only` | `bool`  | `create_positional_parameter` only — produces `POSITIONAL_ONLY` if `True`         |
+➡️ [README_SIGNATURE_DECORATORS](https://github.com/simplibs/simplibs-signature/blob/main/docs/README_SIGNATURE_DECORATORS.md)
 
 ---
 
-## SignatureCreator
+## 🎼 `orchestrators/` — Build a whole signature in one call
 
-The engine behind `signature` and `create_signature` — assembles an
-`inspect.Signature` from any combination of callables and `inspect.Parameter`
-instances. Use it directly when you need the builder instance itself, or reach
-for `create_signature` for the one-liner functional form:
-```python
-from simplibs.signature import SignatureCreator, create_signature
+The high-level builders. They combine the collector with the tools: load the sources, settle the return
+annotation, compose and validate the result.
 
-# Builder form — access the instance if needed
-creator = SignatureCreator(extra_param, base_func=my_func)
-sig = creator.signature
+| Function           | Description / Parameters                                                                                              |
+|--------------------|-----------------------------------------------------------------------------------------------------------------------|
+| `create_signature` | A signature from any mix of parameters and callables (`*param_sources`, `return_source`, `excluded_names`, + shared options). |
+| `copy_signature`   | A changed copy of one callable's signature (`function`, `return_annotation`, `extra_params`, `excluded_names`, + shared options). |
 
-# Functional form — when only the signature is needed
-sig = create_signature(extra_param, base_func=my_func)
-```
-
-| Parameter        | Type                                  | Description                                                                    |
-|------------------|---------------------------------------|--------------------------------------------------------------------------------|
-| `*sources`       | `inspect.Parameter \| Callable`       | Parameters or callables to merge in                                            |
-| `excluded_names` | `tuple[str, ...]`                     | Parameter names to exclude                                                     |
-| `return_type`    | `type \| Callable \| None \| UNSET`   | Return annotation source — type, callable, `None`, or `UNSET`                 |
-| `base_func`      | `Callable \| None`                    | Base function — its parameters and return type are the starting point          |
-| `base_func_first`| `bool`                                | If `True`, `base_func` parameters come first (default: `True`)                 |
-| `accept_double`  | `bool`                                | If `True`, duplicate names are silently skipped (default: `True`)              |
-
-### return_type priority
-
-| Value      | Behaviour                                                        |
-|------------|------------------------------------------------------------------|
-| a type     | Used directly as the return annotation                           |
-| a callable | Its return annotation is extracted and used                      |
-| `None`     | Return annotation is removed                                     |
-| `UNSET`    | Inherited from `base_func` if available, otherwise empty         |
+➡️ [README_SIGNATURE_ORCHESTRATORS](https://github.com/simplibs/simplibs-signature/blob/main/docs/README_SIGNATURE_ORCHESTRATORS.md)
 
 ---
 
-## Constants
+## 🧺 `collector/` — One valid, ordered set of parameters
 
-Pre-built `inspect.Parameter` instances and a frozenset of default exclusions —
-ready to use without touching the `inspect` module:
-```python
-from simplibs.signature import ARGS, KWARGS, EXCLUDED
+The engine behind everything above, and a class you can use yourself. It excludes what you do not want,
+settles name collisions, keeps the order Python requires and, in flat mode, turns everything into one
+keyword-only API.
 
-# ARGS     — *args     (VAR_POSITIONAL)
-# KWARGS   — **kwargs  (VAR_KEYWORD)
-# EXCLUDED — frozenset({"self", "cls"})
-```
+| Member               | Description / Parameters                                                                                  |
+|----------------------|-----------------------------------------------------------------------------------------------------------|
+| `ParameterCollector` | The collector (`excluded_names`, `accept_double`, `replace_double`, `include_variadic`, `include_binding`, `flat_to_kwargs`). |
+| `add_param`          | Adds one parameter (`param`).                                                                              |
+| `add_params`         | Adds several, one after another (`params`).                                                                |
+| `get_ordered_params` | Returns the stored parameters in the order Python requires; a tuple.                                       |
 
-`EXCLUDED` is the default exclusion set used by `ParameterCollector` and
-`create_copy_signature` — `self` and `cls` are always skipped automatically.
-
----
-
-## About the simplibs ecosystem
-
-`simplibs-signature` is part of the **simplibs** ecosystem — a collection of
-small, self-contained Python libraries united under a common namespace and
-philosophy. The name *simplibs* is short for *simple libraries*.
-
-This library builds on two other simplibs packages:
-
-- **`simplibs-exception`** — a structured exception that communicates with the
-  developer: describing not just what went wrong, but pointing towards a fix.
-  All errors raised by `simplibs-signature` are structured `SimpleException`
-  subclasses, catchable as `SignatureError` or the more specific
-  `SignatureParameterError` and `SignatureBuildError`:
-
-
-```python
-from simplibs.signature import SignatureError, SignatureBuildError, SignatureParameterError
-
-try:
-    create_signature()  # no sources provided
-except SignatureBuildError:
-    ...  # signature could not be built
-
-try:
-    create_keyword_parameter(name=123)  # wrong type
-except SignatureParameterError:
-    ...  # invalid argument
-
-try:
-    ...
-except SignatureError:
-    ...  # catches all simplibs-signature errors
-```
-
-- **`simplibs-sentinels`** — sentinel values shared across the ecosystem.
-  `UNSET` is used throughout `simplibs-signature` to distinguish between
-  a parameter that was not provided and one explicitly set to `None`:
-
-```python
-from simplibs.sentinels import UNSET
-from simplibs.signature import create_copy_signature
-
-sig = create_copy_signature(my_func, return_type=UNSET)  # preserve original
-sig = create_copy_signature(my_func, return_type=None)   # remove annotation
-```
-
-All libraries in the simplibs ecosystem share a common philosophy:
-
-**Dyslexia-friendly** — minimise mental load. Atomise code into self-contained
-units, name files after the logic they contain, write explanations that describe
-*why* — not just *what*.
-
-**Programmer's zen** — nothing should be missing and nothing should be
-superfluous. The journey is the destination: code should be fully understood;
-better to go slowly and correctly than quickly and with mistakes. The
-crystallisation approach — not perfection on the first try, but gradual
-refinement towards it.
-
-**Defensive style** — anticipate all possible failure modes so that only safe
-paths remain. Never raise unexpected errors; degrade gracefully.
-
-**Minimalism** — find the path to the goal in as few steps as possible, but
-leave nothing out. Each file has one responsibility.
-
-**Code as craft** — code should be pleasant to look at and evoke a sense of
-harmony. Treat code as a small work of art — like a carpenter carving a
-sculpture. Optimise for the user: everything should make sense without having
-to study the documentation at length.
-
-These are aspirations — a sense of direction. And that is exactly what the
-note about the journey becoming the destination is all about. 🙂
+➡️ [README_SIGNATURE_PARAMETER_COLLECTOR](https://github.com/simplibs/simplibs-signature/blob/main/docs/README_SIGNATURE_PARAMETER_COLLECTOR.md)
 
 ---
 
-*The library is covered by unit tests across all modules.
-Tests are part of the repository and serve
-as living documentation of the expected behaviour.*
+## 🔧 `tools/` — The small building blocks
+
+Independent functions: create a parameter, read, build and attach a signature, change a signature. They
+know nothing about the orchestrators or the decorators above them.
+
+| Function                                 | Group      | Description / Parameters                                                       |
+|------------------------------------------|------------|--------------------------------------------------------------------------------|
+| `create_positional_parameter`            | parameters | A positional-only or ordinary parameter (`name`, `annotation`, `default`, `positional_only`). |
+| `create_keyword_parameter`               | parameters | A keyword-only parameter (`name`, `annotation`, `default`).                    |
+| `get_signature`                          | operations | Reads a signature, with a readable failure (`function`).                       |
+| `set_signature`                          | operations | Attaches a signature through `__signature__` — changes the function itself (`function`, `signature`). |
+| `compose_signature`                      | operations | Builds an `inspect.Signature` and always checks its structure (`parameters`, `return_annotation`). |
+| `add_params_to_signature`                | modifiers  | A copy of a signature with parameters added (`signature`, `params_to_add`, `accept_double`, `replace_double`, `flat_to_kwargs`). |
+| `delete_params_from_signature`           | modifiers  | A copy of a signature without the named parameters (`signature`, `excluded_names`). |
+| `replace_return_annotation_in_signature` | modifiers  | A copy of a signature with another return annotation (`signature`, `new_return_annotation`). |
+| `ARGS`, `KWARGS`                         | constants  | Ready-made `*args` and `**kwargs` parameters.                                    |
+
+➡️ [README_SIGNATURE_TOOLS](https://github.com/simplibs/simplibs-signature/blob/main/docs/README_SIGNATURE_TOOLS.md)
+
+---
+
+## ⚠️ Exceptions
+
+The library defines no exceptions of its own. A wrong call is a structured
+[`simplibs.exception`](https://pypi.org/project/simplibs-exception/) `ParamError` card; its `label` names the
+offending part and its `value` is what was given. Where a card wraps a standard exception, that type is in
+its MRO, so an existing `except ValueError:` keeps working. An argument of the wrong type is a
+`ValidationError` raised by `@validate_call` before the function runs.
+
+| Error name                       | Wraps                                 | Raised when                                                              |
+|----------------------------------|---------------------------------------|--------------------------------------------------------------------------|
+| `DUPLICATE PARAMETER ERROR`      | `ValueError`                          | A name — or a second `*args` / `**kwargs` — collides and `accept_double=False` |
+| `INVALID PARAMETER ORDER`        | `SyntaxError`                         | A required positional parameter would follow an optional one              |
+| `INVALID PARAMETER KIND ERROR`   | `KeyError`                            | A parameter has a kind the collector cannot store                         |
+| `INVALID PARAMETER SOURCE`       | `TypeError`                           | A source of `create_signature` is neither a `Parameter` nor a callable    |
+| `INVALID DEFAULT VALUE`          | `TypeError`                           | A default value contradicts a plain-class annotation                      |
+| `SIGNATURE INTROSPECTION ERROR`  | `ValueError`, `TypeError`             | `get_signature` cannot read the signature of an object                    |
+| `SIGNATURE COMPOSITION ERROR`    | `ValueError`, `AttributeError`, `TypeError` | `compose_signature` gets parameters that do not form a signature     |
+| `SIGNATURE STRUCTURE ERROR`      | `ValueError`                          | `add_params_to_signature` produces a structure `inspect` refuses           |
+| `SIGNATURE TYPE ERROR`           | `TypeError`                           | `add_params_to_signature` meets a parameter of an unusable type            |
+
+Every card points at **your** call: all `simplibs` frames are left out of the reported location, and only if
+nothing else is left does it fall back to the last one. Each helper README ends with the errors of its own package.
+
+---
+
+## 🔗 Related libraries
+
+* **[`simplibs-exception`](https://pypi.org/project/simplibs-exception/)** — the structured exception cards behind every error here.
+* **[`simplibs-validate`](https://pypi.org/project/simplibs-validate/)** — `@validate_call`, which checks the arguments of every public function; its reserved `_validate_call` switch is the one these functions share.
+* **[`simplibs-sentinels`](https://pypi.org/project/simplibs-sentinels/)** — `UNSET`, the marker of a value that was not given.
+
+---
+
+## ☯️ About simplibs
+
+All libraries in the **simplibs** (Simple Libraries) ecosystem share a common
+engineering philosophy:
+
+* **Dyslexia-friendly:**
+We actively minimize cognitive load. Code is atomized into small, self-contained units,
+files are named directly after the logical task they perform, and explanations describe
+*why* something is designed, not just *what* it is.
+* **Programmer's Zen:**
+Nothing should be missing, and nothing should be superfluous. We value clean execution
+paths and robust, understandable code architectures over rushed, messy feature sets.
+* **Defensive Style:**
+We actively anticipate edge cases and failure modes so that only safe operational paths
+remain. Our code is built to degrade gracefully rather than crash unexpectedly.
+* **Minimalism:**
+Find the most direct path to the goal in as few operational steps as possible without
+taking shortcuts on safety, readability, or completeness.
+* **Code as Craft:**
+Code should be pleasant to look at, readable at a glance, and evoke structural harmony.
+We treat software engineering as a precision trade.
+
+---
+
+### 🤝 Contributing & Community
+
+This is an **open-source project** built with love and care. We strongly believe in
+community collaboration and welcome any feedback, bug reports, or feature ideas!
+
+* **Want to contribute?** Feel free to open an Issue or submit a Pull Request.
+* **Want to get in touch?** If you'd like to discuss the project further, collaborate,
+  or just say hello, feel free to open a GitHub Issue or start a Discussion.
+
+---
+
+### 📝 License
+
+This library is released under the **MIT License**. Build great things!
+
+---

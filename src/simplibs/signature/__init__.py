@@ -1,34 +1,28 @@
-from .create_signature import create_signature
-from .copy_signature import copy_signature
-from .core.signature_creator import SignatureCreator
-from .core.parameter_collector import ParameterCollector
-from .core.utils import (
-    create_positional_parameter,
-    create_keyword_parameter,
-    get_signature,
-    set_signature,
-    compose_signature,
-    add_params_to_signature,
-    delete_params_from_signature,
-    replace_return_annotation_in_signature,
-)
-from .decorators import (
-    signature,
-    signature_copy,
-    signature_set,
-    apply_signature_to_wraps,
-    create_signature_decorator,
-)
-from .core.constants import (
-    BINDING_NAMES,
-    VARIADIC_NAMES,
+from .collector import ParameterCollector
+from .constants import (
     ARGS,
     KWARGS,
 )
-from .core.validators import (
-    SignatureError,
-    SignatureBuildError,
-    SignatureParameterError,
+from .decorators import (
+    apply_signature_to_wraps,
+    create_signature_decorator,
+    signature,
+    signature_copy,
+    signature_set,
+)
+from .orchestrators import (
+    copy_signature,
+    create_signature,
+)
+from .tools import (
+    add_params_to_signature,
+    compose_signature,
+    create_keyword_parameter,
+    create_positional_parameter,
+    delete_params_from_signature,
+    get_signature,
+    replace_return_annotation_in_signature,
+    set_signature,
 )
 
 
@@ -40,9 +34,7 @@ __all__ = [
     "signature",
     "signature_copy",
     "signature_set",
-    # Creator class
-    "SignatureCreator",
-    # Parameter class
+    # Parameter collector
     "ParameterCollector",
     # Signature operations
     "get_signature",
@@ -55,132 +47,91 @@ __all__ = [
     # Parameter creators
     "create_positional_parameter",
     "create_keyword_parameter",
-    # Decorators utils
+    # Decorator builders
     "apply_signature_to_wraps",
     "create_signature_decorator",
     # Constants
-    "BINDING_NAMES",
-    "VARIADIC_NAMES",
     "ARGS",
     "KWARGS",
-    # Validators
-    "SignatureError",
-    "SignatureBuildError",
-    "SignatureParameterError",
 ]
 
 
 _DESIGN_NOTES = """
-# simplibs.signature
+# simplibs.signature — Build, Copy and Attach Function Signatures
 
 ## Purpose
-Lightweight utilities for dynamic and declarative function signature manipulation.
-Build, copy, merge, and transform `inspect.Signature` objects with a clean API
-wrapped in structured exceptions.
+A wrapper that takes `(*args, **kwargs)` hides what it really accepts from IDEs,
+documentation tools and `inspect`. This package builds the signature the wrapper
+should report: from parameters, from other functions or from both, merged in a
+valid order, and attaches it.
 
 ## Public API
+This file is the only place where the public API is decided (`__all__`); every
+sub-package uses plain imports.
 
-### Builders (Entry Points)
-| Name                | Description                                      |
-|---------------------|--------------------------------------------------|
-| `create_signature`  | Build signature from scratch or merge sources   |
-| `copy_signature`    | Copy and transform an existing signature        |
+| Name                                     | Type      | Description                                            |
+| :--------------------------------------- | :-------- | :----------------------------------------------------- |
+| `create_signature`                       | Function  | A signature from any mix of parameters and callables.  |
+| `copy_signature`                         | Function  | A changed copy of one callable's signature.            |
+| `signature`                              | Decorator | Assembles a signature from several sources.            |
+| `signature_copy`                         | Decorator | Copies another callable's signature, with changes.     |
+| `signature_set`                          | Decorator | Attaches a finished signature.                         |
+| `ParameterCollector`                     | Class     | Collects parameters into one valid, ordered set.       |
+| `get_signature`                          | Function  | Reads a signature with a readable failure.             |
+| `set_signature`                          | Function  | Attaches a signature through `__signature__`.          |
+| `compose_signature`                      | Function  | Builds an `inspect.Signature`, always validated.       |
+| `add_params_to_signature`                | Function  | A copy of a signature with parameters added.           |
+| `delete_params_from_signature`           | Function  | A copy of a signature without the named parameters.    |
+| `replace_return_annotation_in_signature` | Function  | A copy of a signature with another return annotation.  |
+| `create_positional_parameter`            | Function  | A positional-only or ordinary parameter.               |
+| `create_keyword_parameter`               | Function  | A keyword-only parameter.                              |
+| `apply_signature_to_wraps`               | Function  | A transparent wrapper reporting a given signature.     |
+| `create_signature_decorator`             | Function  | A decorator that applies a fixed signature.            |
+| `ARGS`, `KWARGS`                         | Constants | Ready-made `*args` and `**kwargs` parameters.          |
 
-### Decorators
-| Name                | Description                                      |
-|---------------------|--------------------------------------------------|
-| `@signature`        | Assemble/merge signatures inline                |
-| `@signature_copy`   | Copy and transform existing signature as decorator |
-| `@signature_set`    | Assign a pre-existing signature directly         |
+## Internal Components Registry
 
-### Classes
-| Name                 | Description                                      |
-|----------------------|--------------------------------------------------|
-| `SignatureCreator`   | Builder class for complex signature assembly    |
-| `ParameterCollector` | Internal manager for parameter grouping/ordering |
+| Component       | Type        | Description                                                  |
+| :-------------- | :---------- | :----------------------------------------------------------- |
+| `collector`     | Sub-package | `ParameterCollector`: exclusion, collisions and order.       |
+| `constants`     | Sub-package | `ARGS` and `KWARGS`.                                         |
+| `decorators`    | Sub-package | The three decorators and the builders they are made of.      |
+| `orchestrators` | Sub-package | `create_signature` and `copy_signature`.                     |
+| `tools`         | Sub-package | Parameter creators, signature operations and modifiers.      |
 
-### Signature Operations
-| Name                | Description                                      |
-|---------------------|--------------------------------------------------|
-| `get_signature`     | Safely extract signature from callable          |
-| `set_signature`     | Assign signature via __signature__              |
-| `compose_signature` | Create signature from parameters                |
+## How the Layers Fit
+`decorators` use `orchestrators`; `orchestrators` use the `collector` and
+`tools.operations`; `tools.modifiers` use the `collector`. Nothing points back
+up, so every layer can be used and tested without the ones above it.
 
-### Signature Modifiers
-| Name                                      | Description                              |
-|-------------------------------------------|------------------------------------------|
-| `add_params_to_signature`                 | Add parameters to existing signature     |
-| `delete_params_from_signature`            | Remove parameters by name                |
-| `replace_return_annotation_in_signature`  | Update return type annotation            |
+## Rules Shared by Every Builder
+The same options mean the same thing in `create_signature`, `copy_signature`, the
+decorators and (where offered) the modifiers.
 
-### Parameter Creators
-| Name                          | Description                              |
-|-------------------------------|------------------------------------------|
-| `create_positional_parameter` | Factory for positional parameters       |
-| `create_keyword_parameter`    | Factory for keyword-only parameters     |
+| Option             | Meaning                                                                  |
+| :----------------- | :----------------------------------------------------------------------- |
+| `accept_double`    | If False, a name collision raises `ParamError`.                          |
+| `replace_double`   | Who wins a collision: the later parameter (True) or the earlier one.     |
+| `include_variadic` | If False, every `*args` and `**kwargs` is left out, whatever its name.   |
+| `include_binding`  | If False, parameters named `self` and `cls` are left out.                |
+| `flat_to_kwargs`   | Everything keyword-only; `*args` dropped, all `**kwargs` merged into one.|
 
-### Decorator Utilities
-| Name                        | Description                                      |
-|-----------------------------|--------------------------------------------------|
-| `apply_signature_to_wraps`  | Create wrapper with custom signature + async support |
-| `create_signature_decorator`| Convert signature into reusable decorator       |
+A signature holds one `*args` and one `**kwargs`. A second one counts as a
+collision even under another name. With `replace_double=False` flat mode keeps
+both colliding parameters and renames the later one to `name_1`, `name_2`, ...
 
-### Constants
-| Name              | Type      | Description                        |
-|-------------------|-----------|-----------------------------------|
-| `BINDING_NAMES`   | frozenset | {'self', 'cls'} — binding params   |
-| `VARIADIC_NAMES`  | frozenset | {'args', 'kwargs'} — variadic names|
-| `ARGS`            | Parameter | Pre-built *args (VAR_POSITIONAL)   |
-| `KWARGS`          | Parameter | Pre-built **kwargs (VAR_KEYWORD)   |
+## `_validate_call`
+Every public function is decorated with `@validate_call` and has the reserved
+keyword `_validate_call`. False skips the validation of that call's arguments.
+Internal calls pass False, because the outermost call has already validated them.
+It never changes what a function does with valid input. `compose_signature` is
+the example: the structure of the result is always checked.
 
-### Exceptions
-| Name                        | Description                              |
-|-----------------------------|------------------------------------------|
-| `SignatureError`            | Base — catches all signature errors     |
-| `SignatureBuildError`       | Signature assembly failed                |
-| `SignatureParameterError`   | Invalid argument type                    |
-
-## Module Structure
-
-```
-simplibs/signature/
-├── core/                      # Internal implementations
-│   ├── constants/             # Pre-built parameters and sentinel sets
-│   ├── parameter_collector/   # Parameter grouping engine
-│   ├── signature_creator/     # Builder class and mixins
-│   ├── utils/                 # User-facing utilities
-│   └── validators/            # Validation and exceptions
-├── decorators/                # Decorator implementations
-├── create_signature.py        # Main entry point (builder)
-├── copy_signature.py          # Secondary entry point (transformer)
-└── __init__.py                # This file — public API
-```
-
-## Quick Examples
-
-### Copy and transform
-```python
-@signature_copy(MyClass.__init__, returns=MyClass)
-def create(*args, **kwargs):
-    return MyClass(*args, **kwargs)
-```
-
-### Merge signatures
-```python
-@signature(extra_param, use_func=True, func_first=True)
-def handler(request):
-    ...
-```
-
-### Build from scratch
-```python
-sig = create_signature(param1, param2, my_func)
-```
-
-### Manual operations
-```python
-sig = get_signature(my_func)
-sig = add_params_to_signature(sig, (new_param,))
-set_signature(wrapper_func, sig)
-```
+## Where an Error Points
+Every error is a `ParamError` from `simplibs-exception`. It leaves all simplibs
+frames out of the reported location, so the message points at the code that
+called the library; only if no other frame is left does it fall back to the
+last one. That is why no file here sets `skip_locations`. Where an error wraps
+a standard one (`ValueError`, `TypeError`, `SyntaxError`, ...), the standard type
+is in its MRO and existing `except` clauses keep working.
 """

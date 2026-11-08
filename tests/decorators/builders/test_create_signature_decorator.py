@@ -1,112 +1,46 @@
-"""
-Tests for create_signature_decorator — factory for creating signature-applying decorators.
-"""
-import pytest
-import inspect
 import asyncio
-from typing import Callable
+import inspect
 
-# Ensure pytest-asyncio is installed for async tests
-pytest.importorskip("pytest_asyncio", reason="pytest-asyncio is required for async decorator tests")
+from simplibs.signature import create_signature_decorator
 
-# Imports based on the provided project structure
-from simplibs.signature.decorators.builders.create_signature_decorator import create_signature_decorator
-from simplibs.signature.core.validators.exceptions.SignatureParameterError import SignatureParameterError
+P = inspect.Parameter
 
 
-# -----------------------------------------------------------------------------
-# Fixtures & Helpers
-# -----------------------------------------------------------------------------
-
-@pytest.fixture
-def sample_signature():
-    """A basic signature for testing the decorator."""
-    params = [
-        inspect.Parameter("x", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=int),
-        inspect.Parameter("y", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=int)
-    ]
-    return inspect.Signature(params, return_annotation=int)
+def _signature():
+    return inspect.Signature([P("only", P.KEYWORD_ONLY)])
 
 
-# -----------------------------------------------------------------------------
-# Decorator Functionality
-# -----------------------------------------------------------------------------
-
-def test_decorator_application_sync(sample_signature):
-    """Should create a decorator that correctly applies a signature to a sync function."""
-    decorator = create_signature_decorator(sample_signature)
+def test_decorates_with_the_fixed_signature():
+    decorator = create_signature_decorator(_signature())
 
     @decorator
-    def my_func(a, b):
+    def function(a, b):
         return a + b
 
-    # Verify the signature was injected
-    sig = inspect.signature(my_func)
-    assert sig == sample_signature
-    assert list(sig.parameters.keys()) == ["x", "y"]
-
-    # Verify execution is still correct
-    assert my_func(5, 5) == 10
+    assert inspect.signature(function) == _signature()
+    assert function(1, 2) == 3
 
 
-@pytest.mark.asyncio
-async def test_decorator_application_async(sample_signature):
-    """Should create a decorator that correctly applies a signature to an async function."""
-    decorator = create_signature_decorator(sample_signature)
+def test_one_decorator_serves_many_functions():
+    decorator = create_signature_decorator(_signature())
 
-    @decorator
-    async def my_async_func(a, b):
-        await asyncio.sleep(0)
-        return a * b
+    first = decorator(lambda: 1)
+    second = decorator(lambda: 2)
 
-    # Verify the signature was injected
-    sig = inspect.signature(my_async_func)
-    assert sig == sample_signature
-
-    # Verify it's still a coroutine function
-    assert inspect.iscoroutinefunction(my_async_func)
-
-    # Verify execution (must be awaited)
-    result = await my_async_func(2, 4)
-    assert result == 8
+    assert inspect.signature(first) == inspect.signature(second) == _signature()
+    assert (first(), second()) == (1, 2)
 
 
-def test_decorator_reusability(sample_signature):
-    """Should allow using the same decorator on multiple functions."""
-    apply_sig = create_signature_decorator(sample_signature)
+def test_works_for_a_coroutine_function():
+    @create_signature_decorator(_signature())
+    async def function():
+        return "done"
 
-    @apply_sig
-    def func_one(a, b): pass
-
-    @apply_sig
-    def func_two(c, d): pass
-
-    assert inspect.signature(func_one) == sample_signature
-    assert inspect.signature(func_two) == sample_signature
+    assert inspect.iscoroutinefunction(function)
+    assert asyncio.run(function()) == "done"
 
 
-# -----------------------------------------------------------------------------
-# Validation & Error Handling
-# -----------------------------------------------------------------------------
+def test_validation_switch_is_accepted():
+    decorator = create_signature_decorator(_signature(), _validate_call=False)
 
-def test_factory_raises_on_invalid_signature():
-    """Should raise SignatureParameterError immediately if signature is invalid (Early Validation)."""
-    with pytest.raises(SignatureParameterError):
-        # Passing a string instead of inspect.Signature object
-        create_signature_decorator("not-a-signature")  # type: ignore
-
-
-def test_decorator_raises_on_invalid_decoration_target(sample_signature):
-    """Should raise SignatureParameterError when applying the decorator to a non-callable."""
-    decorator = create_signature_decorator(sample_signature)
-
-    with pytest.raises(SignatureParameterError):
-        # Trying to decorate a string instead of a function
-        decorator("not-a-function")  # type: ignore
-
-
-def test_factory_respects_validate_false():
-    """Should skip early validation when validate=False is passed to the factory."""
-    # This should not raise an error during factory creation
-    decorator = create_signature_decorator("invalid-sig", validate=False)  # type: ignore
-    assert callable(decorator)
+    assert decorator(lambda: 1)() == 1

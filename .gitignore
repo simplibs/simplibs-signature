@@ -4,6 +4,7 @@ venv/
 
 # Internal documentation
 __DOC__/
+__NEW__/
 
 # Python cache
 **/__pycache__/

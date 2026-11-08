@@ -1,206 +1,222 @@
-"""
-Tests for @signature — the universal master decorator for signature manipulation.
-Supports Iterable types for the 'excepts' parameter and ensures late-binding stability.
-"""
-import pytest
-import inspect
 import asyncio
-from typing import Callable, Iterable
+import inspect
+from functools import partial
 
-# Ensure pytest-asyncio is installed for async decorator tests
-pytest.importorskip("pytest_asyncio", reason="pytest-asyncio is required for async decorator tests")
+import pytest
+from simplibs.exception import ParamError
+from simplibs.exception.testing import assert_exception_function
+from simplibs.sentinels import UNSET
 
-# Imports based on the provided project structure
-from simplibs.signature.decorators.signature import signature
-from simplibs.signature.core.validators.exceptions.SignatureBuildError import SignatureBuildError
-from simplibs.signature.core.validators.exceptions.SignatureParameterError import SignatureParameterError
+from simplibs.signature import KWARGS, signature
 
-
-# -----------------------------------------------------------------------------
-# Fixtures & Helpers
-# -----------------------------------------------------------------------------
-
-def base_func(a: int, b: int) -> int:
-    """A simple base function."""
-    return a + b
+P = inspect.Parameter
 
 
-async def async_base(x: int) -> str:
-    """An async base function."""
-    await asyncio.sleep(0)
-    return str(x)
+def _kw(name, default=P.empty):
+    return P(name, P.KEYWORD_ONLY, default=default)
 
 
-# -----------------------------------------------------------------------------
-# Basic Composition (Merging)
-# -----------------------------------------------------------------------------
+def test_empty_decorator_reports_the_function_itself():
+    def function(a, b=1, *args, **kwargs):
+        ...
 
-def test_signature_merge_with_decorated_func():
-    """Should merge provided parameters with the decorated function's signature."""
-    extra_param = inspect.Parameter("c", inspect.Parameter.KEYWORD_ONLY, default=10)
+    decorated = signature()(function)
 
-    @signature(extra_param)  # use_func=True and func_first=True by default
-    def target(a: int, b: int):
+    assert inspect.signature(decorated) == inspect.signature(function)
+
+
+def test_adds_parameters_in_their_place():
+    @signature(_kw("extra"))
+    def function(a, *args, **kwargs):
+        ...
+
+    assert str(inspect.signature(function)) == "(a, *args, extra, **kwargs)"
+
+
+def test_use_func_false_ignores_the_function():
+    @signature(_kw("only"), use_func=False)
+    def function(a, b):
+        ...
+
+    assert str(inspect.signature(function)) == "(*, only)"
+
+
+def test_parameters_win_a_collision_when_the_function_goes_first():
+    @signature(P("a", P.POSITIONAL_OR_KEYWORD, default=2), func_first=True)
+    def function(a=1):
+        ...
+
+    assert inspect.signature(function).parameters["a"].default == 2
+
+
+def test_the_function_wins_a_collision_when_it_goes_last():
+    @signature(P("a", P.POSITIONAL_OR_KEYWORD, default=2), func_first=False)
+    def function(a=1):
+        ...
+
+    assert inspect.signature(function).parameters["a"].default == 1
+
+
+def test_function_first_is_the_default():
+    @signature(P("a", P.POSITIONAL_OR_KEYWORD, default=2))
+    def function(a=1):
+        ...
+
+    assert inspect.signature(function).parameters["a"].default == 2
+
+
+def test_a_callable_among_the_sources_contributes_its_parameters(names_of):
+    def other(x, y):
+        ...
+
+    @signature(other)
+    def function(a):
+        ...
+
+    assert names_of(inspect.signature(function)) == ["a", "x", "y"]
+
+
+@pytest.mark.parametrize("returns, expected", [
+    (int, int),
+    (None, None),
+    (UNSET, inspect.Signature.empty),
+    (lambda: None, inspect.Signature.empty),
+])
+def test_returns(returns, expected):
+    @signature(returns=returns)
+    def function():
+        ...
+
+    assert inspect.signature(function).return_annotation == expected
+
+
+def test_returns_a_callable_takes_its_annotation():
+    def typed() -> str:
+        ...
+
+    @signature(returns=typed)
+    def function():
+        ...
+
+    assert inspect.signature(function).return_annotation is str
+
+
+def test_excepts(names_of):
+    @signature(excepts=["b"])
+    def function(a, b, c):
+        ...
+
+    assert names_of(inspect.signature(function)) == ["a", "c"]
+
+
+def test_include_variadic_false(names_of):
+    @signature(include_variadic=False)
+    def function(a, *args, **kwargs):
+        ...
+
+    assert names_of(inspect.signature(function)) == ["a"]
+
+
+def test_include_binding_false(names_of):
+    @signature(include_binding=False)
+    def method(self, x):
+        ...
+
+    assert names_of(inspect.signature(method)) == ["x"]
+
+
+def test_flat_mode():
+    @signature(flat_to_kwargs=True)
+    def function(a, b=1, *args, **kw):
+        ...
+
+    assert str(inspect.signature(function)) == "(*, a, b=1, **kwargs)"
+
+
+def test_a_second_args_replaces_the_function_s_own():
+    @signature(P("rest", P.VAR_POSITIONAL))
+    def function(a, *args):
+        ...
+
+    assert str(inspect.signature(function)) == "(a, *rest)"
+
+
+def test_the_decorated_function_still_works():
+    @signature(_kw("extra"))
+    def function(a, b=2):
         return a + b
 
-    sig = inspect.signature(target)
-    assert list(sig.parameters.keys()) == ["a", "b", "c"]
-    assert sig.parameters["c"].default == 10
+    assert function(1) == 3
 
 
-def test_signature_override_with_use_func_false():
-    """Should completely ignore the decorated function's signature if use_func=False."""
-    new_param = inspect.Parameter("only_me", inspect.Parameter.POSITIONAL_OR_KEYWORD)
+def test_the_decorated_function_keeps_its_name():
+    @signature()
+    def function():
+        ...
 
-    @signature(new_param, use_func=False, returns=str)
-    def target(*args, **kwargs):
-        return "result"
-
-    sig = inspect.signature(target)
-    assert list(sig.parameters.keys()) == ["only_me"]
-    assert sig.return_annotation is str
+    assert function.__name__ == "function"
 
 
-# -----------------------------------------------------------------------------
-# Async Support & Late Binding
-# -----------------------------------------------------------------------------
+def test_a_coroutine_function_stays_awaitable():
+    @signature(_kw("extra"))
+    async def function(a):
+        return a
 
-@pytest.mark.asyncio
-async def test_signature_on_async_function():
-    """Should correctly wrap an async function and preserve its coroutine nature."""
-    extra = inspect.Parameter("debug", inspect.Parameter.KEYWORD_ONLY, default=False)
-
-    @signature(extra)
-    async def my_async_task(data: dict):
-        await asyncio.sleep(0)
-        return True
-
-    # Check signature
-    sig = inspect.signature(my_async_task)
-    assert "data" in sig.parameters
-    assert "debug" in sig.parameters
-
-    # Check async nature
-    assert inspect.iscoroutinefunction(my_async_task)
-
-    # Check execution
-    result = await my_async_task({"id": 1})
-    assert result is True
+    assert inspect.iscoroutinefunction(function)
+    assert asyncio.run(function(7)) == 7
 
 
-# -----------------------------------------------------------------------------
-# Advanced Ordering (func_first)
-# -----------------------------------------------------------------------------
+def test_an_invalid_source_is_refused_when_decorating(subtests):
+    def function():
+        ...
 
-def test_signature_ordering_func_first_false():
-    """Should place decorated function's parameters AFTER provided params when func_first=False."""
-    prefix_param = inspect.Parameter("prefix", inspect.Parameter.POSITIONAL_OR_KEYWORD)
+    exc = assert_exception_function(
+        subtests,
+        signature(5, _validate_call=False),
+        exception_type=ParamError,
+        invalid_params=(function,),
+        error_name="INVALID PARAMETER SOURCE",
+        label="param_sources[1]",
+        value=5,
+    )
 
-    @signature(prefix_param, func_first=False)
-    def target(a, b):
-        pass
-
-    sig = inspect.signature(target)
-    # Expected: (prefix, a, b) because params are foundation, function is added after
-    assert list(sig.parameters.keys()) == ["prefix", "a", "b"]
-
-
-# -----------------------------------------------------------------------------
-# Filtering (excepts with Iterable support)
-# -----------------------------------------------------------------------------
-
-@pytest.mark.parametrize("collection_type", [list, tuple, set])
-def test_signature_filtering_with_iterables(collection_type):
-    """Should allow removing parameters using various iterable types for 'excepts'."""
-    excludes = collection_type(["b"])
-
-    @signature(excepts=excludes, include_variadic=False)
-    def target(a, b, *args):
-        pass
-
-    sig = inspect.signature(target)
-    assert "a" in sig.parameters
-    assert "b" not in sig.parameters
-    assert "args" not in sig.parameters
+    assert isinstance(exc, TypeError)
 
 
-def test_signature_filtering_with_generator():
-    """Should correctly handle a generator in 'excepts' (testing sanitization)."""
-    gen_excludes = (name for name in ["b"])
+def test_a_collision_is_refused_when_decorating(subtests):
+    def function(a):
+        ...
 
-    @signature(excepts=gen_excludes)
-    def target(a, b):
-        pass
-
-    sig = inspect.signature(target)
-    assert "a" in sig.parameters
-    assert "b" not in sig.parameters
-
-
-# -----------------------------------------------------------------------------
-# Validation & Errors
-# -----------------------------------------------------------------------------
-
-def test_signature_raises_on_invalid_usage_string_trap():
-    """Should raise SignatureParameterError if 'excepts' is a raw string (String Trap)."""
-    with pytest.raises(SignatureParameterError):
-        @signature(excepts="b")  # type: ignore
-        def target(a, b): pass
+    assert_exception_function(
+        subtests,
+        signature(P("a", P.KEYWORD_ONLY), accept_double=False),
+        exception_type=ParamError,
+        invalid_params=(function,),
+        valid_params=(lambda z: None,),
+        error_name="DUPLICATE PARAMETER ERROR",
+        value="a",
+    )
 
 
-def test_signature_raises_on_invalid_parameter_sequence():
-    """
-    Should raise SignatureBuildError if parameters are provided in an invalid order
-    (non-default after default), as the library enforces strict Python syntax.
-    """
-    param_with_default = inspect.Parameter("a", inspect.Parameter.POSITIONAL_OR_KEYWORD, default=1)
-    param_no_default = inspect.Parameter("b", inspect.Parameter.POSITIONAL_OR_KEYWORD)
+@pytest.mark.parametrize("excepts", [["b"], ("b",), {"b"}, (n for n in ["b"])])
+def test_excepts_accepts_any_iterable(excepts, names_of):
+    @signature(excepts=excepts)
+    def function(a, b, c):
+        ...
 
-    # We expect a SignatureBuildError because 'b' follows 'a=1'
-    with pytest.raises(SignatureBuildError) as exc_info:
-        @signature(param_with_default, param_no_default, use_func=False)
-        def target(*args):
-            pass
-
-    # Verify that the error message mentions the invalid order
-    assert "INVALID PARAMETER ORDER" in str(exc_info.value)
-    assert "cannot follow parameters that already have default values" in str(exc_info.value)
+    assert names_of(inspect.signature(function)) == ["a", "c"]
 
 
-def test_signature_respects_validate_false():
-    """Should bypass validation at decoration time if validate=False."""
-    # This should not raise SignatureParameterError during decoration
-    @signature(excepts="not-an-iterable", validate=False) # type: ignore
-    def target(a): pass
+def test_a_generator_of_excepts_serves_many_functions(names_of):
+    decorator = signature(excepts=(name for name in ["b"]))
 
-    # Note: It might still fail during signature assembly, but the entry-point validation is skipped.
+    @decorator
+    def first(a, b):
+        ...
 
+    @decorator
+    def second(b, c):
+        ...
 
-# -----------------------------------------------------------------------------
-# Flat Mode Integration
-# -----------------------------------------------------------------------------
-
-def test_signature_decorator_flat_mode_integration():
-    """
-    Verify that flat_to_kwargs converts all parameters (from decorated function
-    and extra params) to KEYWORD_ONLY when applied as a master decorator.
-    """
-    extra_p = inspect.Parameter("extra", inspect.Parameter.POSITIONAL_ONLY)
-
-    @signature(extra_p, flat_to_kwargs=True)
-    def target_func(a, b=1):
-        pass
-
-    sig = inspect.signature(target_func)
-
-    # We expect 3 parameters: a, b (from function) and extra (from decorator)
-    assert len(sig.parameters) == 3
-    for name in ["a", "b", "extra"]:
-        assert sig.parameters[name].kind == inspect.Parameter.KEYWORD_ONLY
-
-
-def test_signature_decorator_raises_on_invalid_flat_to_kwargs_type():
-    """Should raise SignatureParameterError if flat_to_kwargs is not a boolean."""
-    with pytest.raises(SignatureParameterError):
-        @signature(flat_to_kwargs="not-a-bool")  # type: ignore
-        def target(): pass
+    assert names_of(inspect.signature(first)) == ["a"]
+    assert names_of(inspect.signature(second)) == ["c"]

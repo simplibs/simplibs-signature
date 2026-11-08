@@ -2,20 +2,17 @@ from .apply_signature_to_wraps import apply_signature_to_wraps
 from .create_signature_decorator import create_signature_decorator
 
 
-__all__ = [
-    "apply_signature_to_wraps",
-    "create_signature_decorator",
-]
-
-
 _DESIGN_NOTES = """
-# decorators/builders
+# Decorator Builders Sub-Package
 
-## Contents
-Low-level utilities for building custom signature-aware decorators.
+## Purpose
+The two pieces the decorators are made of. Plain imports, no `__all__`: the
+package root decides what is public.
 
-| Name                        | Description                                      |
-|-----------------------------|--------------------------------------------------|
-| `apply_signature_to_wraps`  | Create wrapper with custom signature + async support |
-| `create_signature_decorator`| Convert signature into a reusable decorator      |
+## Internal Components Registry
+
+| Component                   | Type     | Description                                           |
+| :-------------------------- | :------- | :---------------------------------------------------- |
+| `apply_signature_to_wraps`  | Function | A transparent wrapper that reports a given signature. |
+| `create_signature_decorator`| Function | A decorator that applies a fixed signature.           |
 """
