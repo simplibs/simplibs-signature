@@ -170,7 +170,7 @@ into one.
 * [`get_ordered_params`](#get_ordered_params)
 * [Errors of this package](#errors-of-this-package)
 
-[⬅️ Back to main README](../__DOC__/README.md#-collector--one-valid-ordered-set-of-parameters)
+[⬅️ Back to main README](../README.md#-collector--one-valid-ordered-set-of-parameters)
 
 ---
 

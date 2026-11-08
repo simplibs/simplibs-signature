@@ -87,7 +87,7 @@ the decorated function to the factory as its first **source**.
 * [`apply_signature_to_wraps`](#apply_signature_to_wraps)
 * [Errors of this package](#errors-of-this-package)
 
-[⬅️ Back to main README](../__DOC__/README.md#-decorators--give-a-wrapper-its-real-signature)
+[⬅️ Back to main README](../README.md#-decorators--give-a-wrapper-its-real-signature)
 
 ---
 

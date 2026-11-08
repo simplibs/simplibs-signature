@@ -63,7 +63,7 @@ structure of a composed signature, for example, is **always** checked.
 
 [Errors of this package](#errors-of-this-package)
 
-[⬅️ Back to main README](../__DOC__/README.md#-tools--the-small-building-blocks)
+[⬅️ Back to main README](../README.md#-tools--the-small-building-blocks)
 
 ---
 

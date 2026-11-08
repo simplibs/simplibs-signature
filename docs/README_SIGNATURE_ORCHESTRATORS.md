@@ -90,7 +90,7 @@ is the annotation itself, and `UNSET` keeps the original one.
 * [`copy_signature`](#copy_signature)
 * [Errors of this package](#errors-of-this-package)
 
-[⬅️ Back to main README](../__DOC__/README.md#-orchestrators--build-a-whole-signature-in-one-call)
+[⬅️ Back to main README](../README.md#-orchestrators--build-a-whole-signature-in-one-call)
 
 ---
 
